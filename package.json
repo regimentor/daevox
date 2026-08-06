@@ -14,5 +14,8 @@
     "@types/node": "^26.1.2",
     "openai": "^7.4.0",
     "typescript": "^7.0.2"
+  },
+  "devDependencies": {
+    "electron": "^43.3.0"
   }
 }

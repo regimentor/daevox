@@ -1,8 +1,8 @@
 import { createAgent } from "./agent/agent.js";
-import agentTestTaskPrompt from "./prompts/agent-test-task.js";
-import architectPrompt from "./prompts/architect.js";
-import plannerPrompt from "./prompts/planner.js";
-import teamLeadPrompt from "./prompts/team-lead.js";
+import agentTestTaskPrompt from "./agent/prompts/agent-test-task.js";
+import architectPrompt from "./agent/prompts/architect.js";
+import plannerPrompt from "./agent/prompts/planner.js";
+import teamLeadPrompt from "./agent/prompts/team-lead.js";
 
 async function main() {
   const agent1 = createAgent({

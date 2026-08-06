@@ -3,7 +3,7 @@
     "rootDir": "./",
     "outDir": "./dist",
     "lib": [
-      "esnext"
+      "esnext", "dom"
     ],
     "types": [
       "node"
