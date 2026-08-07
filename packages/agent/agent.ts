@@ -42,8 +42,8 @@ function createAgent({ systemPrompt, userPrompt, name }: CreateAgentArg) {
       ],
     });
 
-    let response = [];
-    let reasoning = [];
+    const response: string[] = [];
+    const reasoning: string[] = [];
 
     for await (const part of completition) {
       console.log(`Agent ${name} received part.`);
@@ -51,12 +51,12 @@ function createAgent({ systemPrompt, userPrompt, name }: CreateAgentArg) {
 
       if (delta?.content) {
         response.push(delta.content);
-        onResponsePipe && onResponsePipe(delta.content);
+        onResponsePipe?.(delta.content);
       }
 
       if (delta?.reasoning_content) {
         reasoning.push(delta.reasoning_content);
-        onReasoningPipe && onReasoningPipe(delta.reasoning_content);
+        onReasoningPipe?.(delta.reasoning_content);
       }
     }
 
