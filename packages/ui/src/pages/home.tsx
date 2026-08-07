@@ -1,5 +1,12 @@
+import { Button } from "@heroui/react/button";
+
 const Home = () => {
-  return <div>Home</div>;
+  return <div>
+
+    <Button>
+      Click me
+    </Button>
+  </div>;
 };
 
 export { Home };

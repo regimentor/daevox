@@ -4,6 +4,9 @@ import { RouterProvider } from "react-router/dom";
 import { App } from "./src/app.js";
 import { Home } from "./src/pages/home.js";
 
+
+import "./index.css";
+
 const router = createHashRouter([
   {
     path: "/",

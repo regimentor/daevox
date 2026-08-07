@@ -8,8 +8,9 @@ const createWindow = () => {
     height: 600,
   });
 
-  const cwd = process.cwd();
-  const indexPath = fileURLToPath(new URL(`${cwd}/index.html`, import.meta.url));
+  const indexPath = fileURLToPath(
+    new URL("./renderer/index.html", import.meta.url),
+  );
 
   win.loadFile(indexPath);
 };

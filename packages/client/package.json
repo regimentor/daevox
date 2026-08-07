@@ -4,7 +4,7 @@
   "type": "module",
   "main": "./dist/index.js",
   "scripts": {
-    "build": "tsc --build && rolldown -c rolldown.config.js",
+    "build": "tsc --build && vite build",
     "start": "npm run build && electron dist/index.js"
   },
   "dependencies": {
@@ -12,7 +12,8 @@
     "@daevox/ui": "^1.0.0"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
     "electron": "^43.3.0",
-    "rolldown": "^1.2.3"
+    "vite": "^8.2.1"
   }
 }
