@@ -1,6 +1,12 @@
 import { allSettled, fork } from "effector";
 import { describe, expect, test } from "vitest";
-import { $messages, addMessage, type ChatMessage } from "./chat.store.js";
+import {
+  $agentStream,
+  $messages,
+  addMessage,
+  receiveAgentStream,
+  type ChatMessage,
+} from "./chat.store.js";
 
 const userMessage: ChatMessage = {
   actor: "user",
@@ -38,5 +44,38 @@ describe("chat store", () => {
     await allSettled(addMessage, { scope, params: agentMessage });
 
     expect(scope.getState($messages)).toEqual([userMessage, agentMessage]);
+  });
+
+  test("accumulates reasoning and response chunks and completes on the agent message", async () => {
+    const scope = fork();
+
+    await allSettled(receiveAgentStream, {
+      scope,
+      params: { requestId: "request-1", type: "reasoning", content: "Think " },
+    });
+    await allSettled(receiveAgentStream, {
+      scope,
+      params: { requestId: "request-1", type: "reasoning", content: "first" },
+    });
+    await allSettled(receiveAgentStream, {
+      scope,
+      params: { requestId: "request-1", type: "response", content: "Hello" },
+    });
+
+    expect(scope.getState($agentStream)).toEqual({
+      requestId: "request-1",
+      reasoning: "Think first",
+      response: "Hello",
+      status: "streaming",
+    });
+
+    await allSettled(addMessage, { scope, params: agentMessage });
+
+    expect(scope.getState($agentStream)).toEqual({
+      requestId: "request-1",
+      reasoning: "Think first",
+      response: "",
+      status: "complete",
+    });
   });
 });

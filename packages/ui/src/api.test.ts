@@ -31,7 +31,11 @@ const createImplementation = () => {
   const onNewMessage = vi.fn((listener: NewMessageListener) => {
     listeners.push(listener);
   });
-  const implementation: Api = { addMessage, onNewMessage };
+  const implementation: Api = {
+    addMessage,
+    onAgentStream: vi.fn(),
+    onNewMessage,
+  };
 
   return { addMessage, implementation, listeners };
 };

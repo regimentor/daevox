@@ -1,8 +1,14 @@
-import type { Api, Message, NewMessageListener } from "@daevox/contracts";
+import type {
+  AgentStreamListener,
+  Api,
+  Message,
+  NewMessageListener,
+} from "@daevox/contracts";
 
 class UiApi {
   private static readonly instance = new UiApi();
   private implementation: Api | undefined;
+  private readonly streamListeners = new Set<AgentStreamListener>();
   private readonly listeners = new Set<NewMessageListener>();
 
   private constructor() {}
@@ -13,6 +19,10 @@ class UiApi {
 
   setImplementation(implementation: Api): void {
     this.implementation = implementation;
+
+    for (const listener of this.streamListeners) {
+      implementation.onAgentStream(listener);
+    }
 
     for (const listener of this.listeners) {
       implementation.onNewMessage(listener);
@@ -32,6 +42,14 @@ class UiApi {
     // This keeps the UI usable in isolation (for example in Storybook). The
     // client replaces this fallback through setImplementation before startup.
     this.notifyListeners(message);
+  }
+
+  onAgentStream(listener: AgentStreamListener): void {
+    this.streamListeners.add(listener);
+
+    if (this.implementation) {
+      this.implementation.onAgentStream(listener);
+    }
   }
 
   onNewMessage(listener: NewMessageListener): void {

@@ -77,4 +77,72 @@ describe('MessageInput', () => {
 
     expect(textarea.value).toBe('A message');
   });
+
+  test('submits with Ctrl+Enter and keeps Enter for new lines', async () => {
+    const onSubmit = vi.fn();
+    const container = await render(<MessageInput onSubmit={onSubmit} />);
+    const textarea = container.querySelector<HTMLTextAreaElement>('textarea')!;
+
+    await changeContent(textarea, 'A message');
+    await act(async () => {
+      textarea.dispatchEvent(
+        new KeyboardEvent('keydown', {
+          bubbles: true,
+          cancelable: true,
+          key: 'Enter',
+        }),
+      );
+    });
+    expect(onSubmit).not.toHaveBeenCalled();
+
+    await act(async () => {
+      textarea.dispatchEvent(
+        new KeyboardEvent('keydown', {
+          bubbles: true,
+          cancelable: true,
+          ctrlKey: true,
+          key: 'Enter',
+        }),
+      );
+    });
+
+    expect(onSubmit).toHaveBeenCalledOnce();
+    expect(onSubmit).toHaveBeenCalledWith('A message');
+    expect(textarea.value).toBe('');
+  });
+
+  test('does not send while an agent response is in progress but keeps the draft editable', async () => {
+    const onSubmit = vi.fn();
+    const container = await render(
+      <MessageInput onSubmit={onSubmit} isSending />,
+    );
+    const textarea = container.querySelector<HTMLTextAreaElement>('textarea')!;
+    const submit = container.querySelector<HTMLButtonElement>('button')!;
+
+    await changeContent(textarea, 'Keep this draft');
+    expect(submit.disabled).toBe(true);
+
+    await act(async () => {
+      container.querySelector('form')?.dispatchEvent(
+        new Event('submit', { bubbles: true, cancelable: true }),
+      );
+    });
+
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(textarea.value).toBe('Keep this draft');
+  });
+
+  test('keeps the draft when submit fails', async () => {
+    const onSubmit = vi.fn().mockRejectedValue(new Error('Agent unavailable'));
+    const container = await render(<MessageInput onSubmit={onSubmit} />);
+    const textarea = container.querySelector<HTMLTextAreaElement>('textarea')!;
+
+    await changeContent(textarea, 'Retry this message');
+    await act(async () => {
+      container.querySelector<HTMLButtonElement>('button')?.click();
+    });
+
+    expect(onSubmit).toHaveBeenCalledWith('Retry this message');
+    expect(textarea.value).toBe('Retry this message');
+  });
 });

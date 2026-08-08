@@ -1,5 +1,9 @@
 import classNames from "classnames";
 import type { ReactNode } from "react";
+import { useEffect, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { Thinking, type ThinkingProps } from "../thinking/index.js";
 import copyIcon from "./assets/copy.svg";
 import styles from "./message.module.css";
 
@@ -11,6 +15,7 @@ type MessageProps = {
   author: string;
   timestamp: string;
   children: ReactNode;
+  thinking?: ThinkingProps;
   onCopy?: () => void;
 };
 
@@ -20,9 +25,23 @@ const Message = ({
   author,
   timestamp,
   children,
+  thinking,
   onCopy,
 }: MessageProps) => {
   const isRight = alignment === "right";
+  const [hasThinking, setHasThinking] = useState(() => thinking !== undefined);
+  const body =
+    typeof children === "string" ? (
+      <ReactMarkdown remarkPlugins={[remarkGfm]}>{children}</ReactMarkdown>
+    ) : (
+      children
+    );
+
+  useEffect(() => {
+    if (thinking !== undefined) {
+      setHasThinking(true);
+    }
+  }, [thinking]);
 
   const handleCopy = () => {
     if (onCopy) {
@@ -43,7 +62,13 @@ const Message = ({
         aria-label="Copy message"
         onClick={handleCopy}
       >
-        <img src={copyIcon} alt="" className={styles.copyIcon} width={14} height={14} />
+        <img
+          src={copyIcon}
+          alt=""
+          className={styles.copyIcon}
+          width={14}
+          height={14}
+        />
       </button>
     </div>
   );
@@ -59,7 +84,8 @@ const Message = ({
       {!isRight ? <div className={styles.accent} aria-hidden /> : null}
       <div className={styles.content}>
         <p className={styles.author}>{author}</p>
-        <p className={styles.body}>{children}</p>
+        {hasThinking ? <Thinking {...(thinking ?? {})} /> : null}
+        <div className={styles.body}>{body}</div>
         <div className={styles.footer}>
           {!isRight ? copyControl : null}
           <p className={styles.timestamp}>{timestamp}</p>

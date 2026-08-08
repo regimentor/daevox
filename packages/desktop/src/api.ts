@@ -1,4 +1,5 @@
 import {
+  type AgentStreamListener,
   MessageSchema,
   type Api,
   type Message,
@@ -9,24 +10,41 @@ import type { DaevoxBridge } from "./rpc.js";
 
 class ElectronApi implements Api {
   private readonly messages: Message[] = [];
+  private readonly streamListeners = new Set<AgentStreamListener>();
   private readonly listeners = new Set<NewMessageListener>();
   private readonly mutex = new Mutex();
 
-  constructor(private readonly bridge: DaevoxBridge) {}
+  constructor(private readonly bridge: DaevoxBridge) {
+    bridge.onAgentStream((event) => {
+      for (const listener of this.streamListeners) {
+        listener(event);
+      }
+    });
+  }
 
   addMessage(message: Message): Promise<void> {
     return this.mutex.runExclusive(async () => {
       const parsedMessage = MessageSchema.parse(message);
+      const requestId = crypto.randomUUID();
+      const history = [...this.messages];
+
+      this.messages.push(parsedMessage);
+      this.notifyListeners(parsedMessage);
+
       const response = await this.bridge.addMessage({
-        history: [...this.messages],
+        history,
         message: parsedMessage,
+        requestId,
       });
       const parsedResponse = MessageSchema.parse(response);
 
-      this.messages.push(parsedMessage, parsedResponse);
-      this.notifyListeners(parsedMessage);
+      this.messages.push(parsedResponse);
       this.notifyListeners(parsedResponse);
     });
+  }
+
+  onAgentStream(listener: AgentStreamListener): void {
+    this.streamListeners.add(listener);
   }
 
   onNewMessage(listener: NewMessageListener): void {

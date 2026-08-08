@@ -1,11 +1,13 @@
 import {
+  type AgentStreamListener,
   nextCompletionChannel,
   type Message,
-  type NextCompletionRequest,
+  type NextCompletionTransportRequest,
 } from "@daevox/contracts";
 
 type DaevoxBridge = {
-  addMessage(request: NextCompletionRequest): Promise<Message>;
+  addMessage(request: NextCompletionTransportRequest): Promise<Message>;
+  onAgentStream(listener: AgentStreamListener): void;
 };
 
 declare global {

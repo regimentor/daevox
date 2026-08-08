@@ -1,4 +1,5 @@
 import { describe, expect, test, vi } from 'vitest';
+import thinkingStyles from '../thinking/thinking.module.css';
 import styles from './message.module.css';
 import { Message } from './message.js';
 import { render } from '../test-utils.js';
@@ -16,13 +17,19 @@ describe('Message', () => {
 
     expect(article?.classList.contains(styles.left!)).toBe(true);
     expect(article?.querySelector(`.${styles.accent!}`)).not.toBeNull();
-    expect(content?.querySelector(`.${styles.author!}`)?.textContent).toBe('Daevox');
+    expect(content?.querySelector(`.${styles.author!}`)?.textContent).toBe(
+      'Daevox',
+    );
     expect(content?.querySelector(`.${styles.body!}`)?.textContent).toBe(
       'The deployment completed successfully.',
     );
-    expect(content?.querySelector(`.${styles.timestamp!}`)?.textContent).toBe('12:34');
+    expect(content?.querySelector(`.${styles.timestamp!}`)?.textContent).toBe(
+      '12:34',
+    );
     expect(footer?.children.item(0)?.querySelector('button')).not.toBeNull();
-    expect(footer?.children.item(1)?.classList.contains(styles.timestamp!)).toBe(true);
+    expect(
+      footer?.children.item(1)?.classList.contains(styles.timestamp!),
+    ).toBe(true);
   });
 
   test('renders outgoing messages on the right and places copy after the timestamp', async () => {
@@ -36,8 +43,140 @@ describe('Message', () => {
 
     expect(article?.classList.contains(styles.right!)).toBe(true);
     expect(article?.querySelectorAll(`.${styles.accent!}`).length).toBe(1);
-    expect(footer?.children.item(0)?.classList.contains(styles.timestamp!)).toBe(true);
+    expect(
+      footer?.children.item(0)?.classList.contains(styles.timestamp!),
+    ).toBe(true);
     expect(footer?.children.item(1)?.querySelector('button')).not.toBeNull();
+  });
+
+  test('renders Markdown and preserves line breaks in string messages', async () => {
+    const container = await render(
+      <Message author="Daevox" timestamp="12:34">
+        {'**Bold**\nSecond line\n\n- First item\n- Second item'}
+      </Message>,
+    );
+    const body = container.querySelector(`.${styles.body}`);
+
+    expect(body?.querySelector('strong')?.textContent).toBe('Bold');
+    expect(body?.querySelector('ul')).not.toBeNull();
+    expect(body?.textContent).toContain('Bold\nSecond line');
+  });
+
+  test('does not render raw HTML from string messages', async () => {
+    const container = await render(
+      <Message author="Daevox" timestamp="12:34">
+        {'<script>alert("unsafe")</script>\n**Safe**'}
+      </Message>,
+    );
+    const body = container.querySelector(`.${styles.body}`);
+
+    expect(body?.querySelector('script')).toBeNull();
+    expect(body?.querySelector('strong')?.textContent).toBe('Safe');
+  });
+
+  test('renders active and completed thinking inside the message', async () => {
+    const active = await render(
+      <Message
+        author="Daevox"
+        timestamp="12:34"
+        thinking={{ content: 'Analyzing the request' }}
+      >
+        The response
+      </Message>,
+    );
+    const activeArticle = active.querySelector('article');
+    const activeThinking = activeArticle?.querySelector('details');
+
+    expect(activeThinking?.open).toBe(true);
+    expect(activeThinking?.textContent).toContain('Analyzing the request');
+    expect(activeArticle?.querySelector(`.${styles.body!}`)?.textContent).toBe(
+      'The response',
+    );
+
+    const complete = await render(
+      <Message
+        author="Daevox"
+        timestamp="12:34"
+        thinking={{ content: 'Finished reasoning', isComplete: true }}
+      >
+        The response
+      </Message>,
+    );
+
+    expect(
+      complete.querySelector<HTMLDetailsElement>('article details')?.open,
+    ).toBe(false);
+
+    const empty = await render(
+      <Message author="Daevox" timestamp="12:34" thinking={{ content: '' }}>
+        The response
+      </Message>,
+    );
+
+    expect(empty.querySelector('details')?.textContent).toContain(
+      'Daevox is thinking…',
+    );
+  });
+
+  test('scrolls active thinking content to the newest chunk', async () => {
+    const originalScrollHeight = Object.getOwnPropertyDescriptor(
+      HTMLElement.prototype,
+      'scrollHeight',
+    );
+    const originalScrollTop = Object.getOwnPropertyDescriptor(
+      HTMLElement.prototype,
+      'scrollTop',
+    );
+    let scrollTop = 0;
+    Object.defineProperty(HTMLElement.prototype, 'scrollHeight', {
+      configurable: true,
+      get: () => 480,
+    });
+    Object.defineProperty(HTMLElement.prototype, 'scrollTop', {
+      configurable: true,
+      get: () => scrollTop,
+      set: (value: number) => {
+        scrollTop = value;
+      },
+    });
+
+    try {
+      const container = await render(
+        <Message
+          author="Daevox"
+          timestamp="12:34"
+          thinking={{ content: 'A long reasoning stream' }}
+        >
+          The response
+        </Message>,
+      );
+
+      expect(
+        container.querySelector<HTMLParagraphElement>(
+          `.${thinkingStyles.content}`,
+        )?.scrollTop,
+      ).toBe(480);
+    } finally {
+      if (originalScrollHeight) {
+        Object.defineProperty(
+          HTMLElement.prototype,
+          'scrollHeight',
+          originalScrollHeight,
+        );
+      } else {
+        delete (HTMLElement.prototype as { scrollHeight?: number })
+          .scrollHeight;
+      }
+      if (originalScrollTop) {
+        Object.defineProperty(
+          HTMLElement.prototype,
+          'scrollTop',
+          originalScrollTop,
+        );
+      } else {
+        delete (HTMLElement.prototype as { scrollTop?: number }).scrollTop;
+      }
+    }
   });
 
   test('calls the supplied copy handler', async () => {

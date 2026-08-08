@@ -1,0 +1,23 @@
+.root {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  padding: 0.625rem 0.75rem;
+  background: var(--surface-secondary);
+  color: var(--muted);
+  font-size: 0.8125rem;
+  line-height: 1.25rem;
+}
+
+.summary {
+  cursor: pointer;
+  color: var(--foreground);
+  font-weight: 600;
+}
+
+.content {
+  max-height: 10rem;
+  margin: 0.5rem 0 0;
+  overflow: auto;
+  white-space: pre-wrap;
+}

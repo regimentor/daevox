@@ -66,6 +66,73 @@
   line-height: 1.5;
   color: inherit;
   overflow-wrap: break-word;
+  white-space: pre-wrap;
+}
+
+.body :global(p) {
+  margin: 0;
+}
+
+.body :global(p + p),
+.body :global(ul + p),
+.body :global(ol + p),
+.body :global(blockquote + p) {
+  margin-top: 0.75rem;
+}
+
+.body :global(ul),
+.body :global(ol) {
+  margin: 0;
+  padding-inline-start: 1.5rem;
+}
+
+.body :global(li + li) {
+  margin-top: 0.25rem;
+}
+
+.body :global(blockquote) {
+  margin: 0;
+  padding-inline-start: 0.75rem;
+  border-inline-start: 0.1875rem solid var(--message-accent);
+  color: var(--muted);
+}
+
+.body :global(pre) {
+  margin: 0;
+  padding: 0.75rem;
+  overflow-x: auto;
+  border-radius: 0.375rem;
+  background: color-mix(
+    in oklch,
+    var(--surface-secondary) 80%,
+    var(--foreground)
+  );
+  white-space: pre;
+}
+
+.body :global(code) {
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
+  font-size: 0.8125rem;
+}
+
+.body :global(:not(pre) > code) {
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.25rem;
+  background: color-mix(in oklch, var(--muted) 16%, transparent);
+}
+
+.body :global(a) {
+  color: var(--focus);
+  text-decoration: underline;
+  text-underline-position: from-font;
+}
+
+.body :global(hr) {
+  margin: 0.75rem 0;
+  border: 0;
+  border-top: 1px solid var(--border);
 }
 
 .right .body {
