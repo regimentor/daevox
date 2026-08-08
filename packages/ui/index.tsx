@@ -2,7 +2,7 @@ import { createRoot } from "react-dom/client";
 import { createHashRouter, Outlet } from "react-router";
 import { RouterProvider } from "react-router/dom";
 import { App } from "./src/app.js";
-import { Home } from "./src/pages/home.js";
+import { Chat } from "./src/pages/chat.js";
 
 
 import "./index.css";
@@ -14,7 +14,7 @@ const router = createHashRouter([
     children: [
       {
         path: "/",
-        Component: Home,
+        Component: Chat,
       },
     ],
   },

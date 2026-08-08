@@ -1,0 +1,128 @@
+.root {
+  display: flex;
+  align-items: stretch;
+  overflow: clip;
+  width: 100%;
+  border-radius: 0.5rem;
+  background: var(--surface);
+  color: var(--surface-foreground);
+}
+
+.left {
+  --message-accent: #2563eb;
+}
+
+.right {
+  --message-accent: #4f46e5;
+  background: var(--surface-secondary);
+  color: var(--surface-secondary-foreground);
+}
+
+.accent {
+  flex-shrink: 0;
+  width: 0.25rem;
+  background: var(--message-accent);
+}
+
+.content {
+  display: flex;
+  flex: 1 0 0;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+  padding: 1rem;
+}
+
+.left .content {
+  align-items: flex-start;
+}
+
+.right .content {
+  align-items: flex-end;
+}
+
+.author {
+  margin: 0;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: normal;
+  color: var(--muted);
+  text-transform: uppercase;
+  text-decoration: underline;
+  text-underline-position: from-font;
+  white-space: nowrap;
+  overflow-wrap: break-word;
+}
+
+.right .author {
+  text-align: right;
+}
+
+.body {
+  margin: 0;
+  width: 100%;
+  font-size: 0.875rem;
+  font-weight: 400;
+  line-height: 1.5;
+  color: inherit;
+  overflow-wrap: break-word;
+}
+
+.right .body {
+  text-align: right;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.actions {
+  display: flex;
+  align-items: flex-start;
+  flex-shrink: 0;
+}
+
+.copyButton {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  border: none;
+  border-radius: 0.25rem;
+  background: transparent;
+  cursor: pointer;
+  color: #94a3b8;
+  transition: background-color 120ms ease;
+}
+
+.copyButton:hover:not(:disabled) {
+  background: color-mix(in oklch, var(--muted) 16%, transparent);
+}
+
+.copyButton:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.copyIcon {
+  display: block;
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+.timestamp {
+  margin: 0;
+  flex-shrink: 0;
+  font-size: 0.6875rem;
+  font-weight: 400;
+  line-height: normal;
+  color: #94a3b8;
+  white-space: nowrap;
+  overflow-wrap: break-word;
+}

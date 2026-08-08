@@ -1,5 +1,11 @@
 declare module "*.css" {
-  const classes: Record<string, string>;
+  const styles: Record<string, string>;
 
-  export default classes;
+  export default styles;
+}
+
+declare module "*.svg" {
+  const src: string;
+
+  export default src;
 }

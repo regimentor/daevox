@@ -1,0 +1,7 @@
+.app {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--background);
+  min-height: 100vh;
+  overflow: visible;
+}

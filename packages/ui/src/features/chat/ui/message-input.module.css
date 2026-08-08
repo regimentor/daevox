@@ -1,0 +1,34 @@
+.root {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex-shrink: 0;
+  gap: 0.75rem;
+  width: 100%;
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+  background: var(--background);
+}
+
+.submit {
+  border: 0;
+  border-radius: 0.5rem;
+  padding: 0.625rem 1rem;
+  background: var(--accent);
+  color: var(--accent-foreground);
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.submit:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.submit:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
