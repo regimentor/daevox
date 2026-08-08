@@ -18,6 +18,7 @@
     "build-storybook": "storybook build"
   },
   "dependencies": {
+    "@daevox/contracts": "^1.0.0",
     "classnames": "^2.5.1",
     "effector": "^23.4.4",
     "effector-react": "^23.3.0",

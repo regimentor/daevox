@@ -1,21 +1,16 @@
+import { MessageSchema, type Message } from "@daevox/contracts";
 import { createEvent, createStore } from "effector";
 
-type ChatMessageActor = "user" | "agent";
-type ChatMessageType = "completion";
+const addMessage = createEvent<Message>();
 
-type ChatMessage = {
-  actor: ChatMessageActor;
-  type: ChatMessageType;
-  content: string;
-  createdAt: Date;
-};
-
-const addMessage = createEvent<ChatMessage>();
-
-const $messages = createStore<ChatMessage[]>([]).on(
+const $messages = createStore<Message[]>([]).on(
   addMessage,
-  (messages, message) => [...messages, message],
+  (messages, message) => [...messages, MessageSchema.parse(message)],
 );
 
+type ChatMessage = Message;
+type ChatMessageActor = Message["actor"];
+type ChatMessageType = Message["type"];
+
 export { $messages, addMessage };
-export type { ChatMessage, ChatMessageActor, ChatMessageType };
+export type { ChatMessage, ChatMessageActor, ChatMessageType, Message };
