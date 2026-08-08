@@ -1,14 +1,14 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "rootDir": ".",
+    "rootDir": "./src",
     "outDir": "./dist"
   },
-  "include": ["./**/*.ts"],
+  "include": ["./src/**/*.ts", "./src/**/*.cts"],
   "exclude": ["dist"],
   "references": [
-    { "path": "../agent" },
     { "path": "../contracts" },
+    { "path": "../domain" },
     { "path": "../ui" }
   ]
 }

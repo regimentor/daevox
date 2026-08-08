@@ -11,9 +11,15 @@ type AgentArg = {
   onResponsePipe?: (response: string) => void;
 };
 
+type AgentMessage = {
+  role: "user" | "assistant";
+  content: string;
+};
+
 type CreateAgentArg = {
   systemPrompt: string;
-  userPrompt: string;
+  userPrompt?: string;
+  messages?: AgentMessage[];
   name: string;
 };
 
@@ -22,11 +28,23 @@ const client = new OpenAI({
   apiKey: "YOUR_API_KEY",
 });
 
-function createAgent({ systemPrompt, userPrompt, name }: CreateAgentArg) {
+function createAgent({
+  systemPrompt,
+  userPrompt,
+  messages,
+  name,
+}: CreateAgentArg) {
   return async function ({ onReasoningPipe, onResponsePipe }: AgentArg) {
     console.log(`Agent ${name} is running...`);
 
-    const completition = await client.chat.completions.create({
+    const conversation = messages ?? [
+      {
+        role: "user" as const,
+        content: userPrompt ?? "",
+      },
+    ];
+
+    const completion = await client.chat.completions.create({
       model: "google/gemma-4-12B-it-qat-q4_0-gguf:Q4_0",
       reasoning_effort: "max",
       stream: true,
@@ -35,17 +53,14 @@ function createAgent({ systemPrompt, userPrompt, name }: CreateAgentArg) {
           role: "system",
           content: systemPrompt,
         },
-        {
-          role: "user",
-          content: userPrompt,
-        },
+        ...conversation,
       ],
     });
 
     const response: string[] = [];
     const reasoning: string[] = [];
 
-    for await (const part of completition) {
+    for await (const part of completion) {
       console.log(`Agent ${name} received part.`);
       const delta = part.choices[0]?.delta as LocalDelta;
 
@@ -68,3 +83,4 @@ function createAgent({ systemPrompt, userPrompt, name }: CreateAgentArg) {
 }
 
 export { createAgent };
+export type { AgentMessage };
