@@ -1,5 +1,5 @@
 {
-  "name": "@daevox/client",
+  "name": "@daevox/desktop",
   "version": "1.0.0",
   "type": "module",
   "main": "./dist/index.js",
