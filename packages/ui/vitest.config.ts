@@ -50,7 +50,12 @@ export default defineConfig({
         extends: true,
         test: {
           name: 'units',
-          include: ['src/units/**/*.test.tsx', 'src/features/**/*.test.ts', 'src/features/**/*.test.tsx'],
+          include: [
+            'src/api.test.ts',
+            'src/units/**/*.test.tsx',
+            'src/features/**/*.test.ts',
+            'src/features/**/*.test.tsx',
+          ],
           browser: {
             enabled: true,
             headless: true,

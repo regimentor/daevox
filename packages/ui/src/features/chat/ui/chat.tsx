@@ -1,6 +1,7 @@
 import classNames from "classnames";
 import { useUnit } from "effector-react";
 import { Message } from "../../../units/message/index.js";
+import { uiApi } from "../../../api.js";
 import { $messages, addMessage } from "../chat.store.js";
 import { MessageInput } from "./message-input.js";
 import styles from "./chat.module.css";
@@ -20,17 +21,29 @@ const Chat = ({ className }: ChatProps) => {
   const add = useUnit(addMessage);
 
   const handleSubmit = (content: string) => {
-    add({
+    const message = {
       actor: "user",
       type: "completion",
       content,
       createdAt: new Date(),
-    });
+    } as const;
+
+    if (uiApi.isConfigured()) {
+      void uiApi.addMessage(message);
+      return;
+    }
+
+    add(message);
   };
 
   return (
     <section className={classNames(styles.root, className)} aria-label="Chat">
-      <div className={styles.history} role="log" aria-live="polite" aria-label="Message history">
+      <div
+        className={styles.history}
+        role="log"
+        aria-live="polite"
+        aria-label="Message history"
+      >
         {messages.length === 0 ? (
           <p className={styles.empty}>No messages yet.</p>
         ) : (

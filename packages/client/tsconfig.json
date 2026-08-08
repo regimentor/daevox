@@ -8,6 +8,7 @@
   "exclude": ["dist"],
   "references": [
     { "path": "../agent" },
+    { "path": "../contracts" },
     { "path": "../ui" }
   ]
 }
