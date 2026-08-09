@@ -32,10 +32,13 @@ const Thinking = ({ content, isComplete = false }: ThinkingProps) => {
 
   return (
     <details
-      className={styles.root}
+      className={[styles.root, !isComplete && styles.active]
+        .filter(Boolean)
+        .join(" ")}
       open={open}
       onToggle={(event) => setOpen(event.currentTarget.open)}
       aria-label="Agent thinking"
+      aria-busy={!isComplete}
     >
       <summary className={styles.summary}>Thinking</summary>
       <p ref={contentRef} className={styles.content}>

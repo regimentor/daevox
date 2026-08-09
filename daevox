@@ -1,0 +1,60 @@
+#!/bin/sh
+
+set -eu
+
+ROOT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+WEB_SEARCH_PID=
+DESKTOP_PID=
+
+cleanup() {
+    status=$?
+    trap - EXIT INT TERM
+
+    if [ -n "$WEB_SEARCH_PID" ]; then
+        kill "$WEB_SEARCH_PID" 2>/dev/null || true
+        wait "$WEB_SEARCH_PID" 2>/dev/null || true
+    fi
+
+    if [ -n "$DESKTOP_PID" ]; then
+        kill "$DESKTOP_PID" 2>/dev/null || true
+        wait "$DESKTOP_PID" 2>/dev/null || true
+    fi
+
+    exit "$status"
+}
+
+trap cleanup EXIT
+trap 'exit 130' INT TERM
+
+if ! command -v npm >/dev/null 2>&1; then
+    echo "daevox: npm is required" >&2
+    exit 127
+fi
+
+if ! command -v uv >/dev/null 2>&1; then
+    echo "daevox: uv is required to run external/web_search" >&2
+    exit 127
+fi
+
+cd "$ROOT_DIR"
+
+echo "[daevox] Building packages..."
+npm run build
+
+echo "[daevox] Starting web_search (logs below)..."
+(
+    cd "$ROOT_DIR/external/web_search"
+    exec uv run uvicorn websearch.main:app --host 127.0.0.1 --port 9000
+) &
+WEB_SEARCH_PID=$!
+
+echo "[daevox] Starting desktop (logs below)..."
+(
+    cd "$ROOT_DIR"
+    exec npm --workspace @daevox/desktop run start
+) &
+DESKTOP_PID=$!
+
+# Keep this shell alive while the desktop application is running.  Its exit
+# triggers cleanup(), which also stops web_search.
+wait "$DESKTOP_PID"

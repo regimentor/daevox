@@ -1,4 +1,7 @@
 .root {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   width: 100%;
   border: 1px solid var(--border);
   border-radius: 0.5rem;
@@ -7,17 +10,100 @@
   color: var(--muted);
   font-size: 0.8125rem;
   line-height: 1.25rem;
+  transition: border-color 180ms ease;
+}
+
+.active {
+  border-color: transparent;
+  background:
+    linear-gradient(var(--surface-secondary), var(--surface-secondary))
+      padding-box,
+    linear-gradient(110deg, var(--border), var(--accent), var(--border))
+      border-box;
+  background-size:
+    100% 100%,
+    240% 100%;
+  animation:
+    thinking-border-shimmer 2.8s linear infinite,
+    thinking-glow 2.1s ease-in-out infinite;
+}
+
+.active::before {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    110deg,
+    transparent 25%,
+    color-mix(in oklch, var(--accent) 14%, transparent) 50%,
+    transparent 75%
+  );
+  background-size: 220% 100%;
+  content: "";
+  pointer-events: none;
+  animation: thinking-sheen 2.4s linear infinite;
 }
 
 .summary {
+  position: relative;
+  z-index: 1;
   cursor: pointer;
   color: var(--foreground);
   font-weight: 600;
 }
 
 .content {
+  position: relative;
+  z-index: 1;
   max-height: 10rem;
   margin: 0.5rem 0 0;
   overflow: auto;
   white-space: pre-wrap;
+}
+
+@keyframes thinking-border-shimmer {
+  from {
+    background-position:
+      0 0,
+      140% 0;
+  }
+
+  to {
+    background-position:
+      0 0,
+      -40% 0;
+  }
+}
+
+@keyframes thinking-sheen {
+  from {
+    background-position: 140% 0;
+  }
+
+  to {
+    background-position: -40% 0;
+  }
+}
+
+@keyframes thinking-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0.3rem color-mix(in oklch, var(--accent) 9%, transparent);
+  }
+
+  50% {
+    box-shadow: 0 0 0.85rem color-mix(in oklch, var(--accent) 24%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .active,
+  .active::before {
+    animation: none;
+  }
+
+  .active {
+    box-shadow: 0 0 0.5rem color-mix(in oklch, var(--accent) 16%, transparent);
+  }
 }

@@ -18,6 +18,19 @@ const ThinkingHarness = () => {
   );
 };
 
+const CompletionHarness = () => {
+  const [isComplete, setIsComplete] = useState(false);
+
+  return (
+    <>
+      <button type="button" onClick={() => setIsComplete(true)}>
+        Complete
+      </button>
+      <Thinking content="Reasoning" isComplete={isComplete} />
+    </>
+  );
+};
+
 describe("Thinking", () => {
   test("keeps its content when the stream no longer provides it", async () => {
     const container = await render(<ThinkingHarness />);
@@ -43,5 +56,19 @@ describe("Thinking", () => {
     });
 
     expect(details.open).toBe(false);
+  });
+
+  test("marks the block as active until thinking is complete", async () => {
+    const container = await render(<CompletionHarness />);
+    const details = container.querySelector<HTMLDetailsElement>("details")!;
+    const complete = container.querySelector("button")!;
+
+    expect(details.getAttribute("aria-busy")).toBe("true");
+
+    await act(async () => {
+      complete.click();
+    });
+
+    expect(details.getAttribute("aria-busy")).toBe("false");
   });
 });
