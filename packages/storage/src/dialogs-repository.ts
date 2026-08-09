@@ -22,7 +22,7 @@ class DialogsRepository {
 
   findMany() {
     return this.client.dialogs.findMany({
-      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     });
   }
 

@@ -1,5 +1,10 @@
 import { app, BrowserWindow, shell } from "electron";
 import { fileURLToPath } from "node:url";
+import {
+  createPrismaClient,
+  DialogsMessagesRepository,
+  DialogsRepository,
+} from "@daevox/storage";
 import { registerIpcHandlers } from "./register-ipc-handlers.js";
 
 const createWindow = () => {
@@ -28,7 +33,24 @@ const createWindow = () => {
   win.loadFile(indexPath);
 };
 
-app.whenReady().then(() => {
-  registerIpcHandlers();
-  createWindow();
-});
+app
+  .whenReady()
+  .then(async () => {
+    const client = createPrismaClient();
+    const dialogs = new DialogsRepository(client);
+    await dialogs.create();
+
+    registerIpcHandlers({
+      dialogs,
+      messages: new DialogsMessagesRepository(client),
+    });
+    createWindow();
+
+    app.on("before-quit", () => {
+      void client.$disconnect();
+    });
+  })
+  .catch((error) => {
+    console.error("[desktop] storage initialization failed", error);
+    app.quit();
+  });

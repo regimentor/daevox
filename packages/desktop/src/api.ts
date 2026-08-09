@@ -1,15 +1,17 @@
 import {
   type AgentStreamListener,
+  DialogSummarySchema,
   MessageSchema,
   type Api,
+  type DialogSummary,
   type Message,
+  type NewMessageEvent,
   type NewMessageListener,
 } from "@daevox/contracts";
 import { Mutex } from "async-mutex";
 import type { DaevoxBridge } from "./rpc.js";
 
 class ElectronApi implements Api {
-  private readonly messages: Message[] = [];
   private readonly streamListeners = new Set<AgentStreamListener>();
   private readonly listeners = new Set<NewMessageListener>();
   private readonly mutex = new Mutex();
@@ -22,24 +24,47 @@ class ElectronApi implements Api {
     });
   }
 
-  addMessage(message: Message): Promise<void> {
+  listDialogs(): Promise<DialogSummary[]> {
+    return this.bridge
+      .listDialogs()
+      .then((dialogs) =>
+        dialogs.map((dialog) => DialogSummarySchema.parse(dialog)),
+      );
+  }
+
+  createDialog(): Promise<DialogSummary> {
+    return this.bridge
+      .createDialog()
+      .then((dialog) => DialogSummarySchema.parse(dialog));
+  }
+
+  getDialogMessages(dialogId: string): Promise<Message[]> {
+    return this.bridge
+      .getDialogMessages(dialogId)
+      .then((messages) =>
+        messages.map((message) => MessageSchema.parse(message)),
+      );
+  }
+
+  deleteDialog(dialogId: string): Promise<void> {
+    return this.bridge.deleteDialog(dialogId);
+  }
+
+  addMessage(dialogId: string, message: Message): Promise<void> {
     return this.mutex.runExclusive(async () => {
       const parsedMessage = MessageSchema.parse(message);
       const requestId = crypto.randomUUID();
-      const history = [...this.messages];
 
-      this.messages.push(parsedMessage);
-      this.notifyListeners(parsedMessage);
+      this.notifyListeners({ dialogId, message: parsedMessage });
 
       const response = await this.bridge.addMessage({
-        history,
+        dialogId,
         message: parsedMessage,
         requestId,
       });
       const parsedResponse = MessageSchema.parse(response);
 
-      this.messages.push(parsedResponse);
-      this.notifyListeners(parsedResponse);
+      this.notifyListeners({ dialogId, message: parsedResponse });
     });
   }
 
@@ -51,9 +76,9 @@ class ElectronApi implements Api {
     this.listeners.add(listener);
   }
 
-  private notifyListeners(message: Message): void {
+  private notifyListeners(event: NewMessageEvent): void {
     for (const listener of this.listeners) {
-      listener(message);
+      listener(event);
     }
   }
 }

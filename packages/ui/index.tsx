@@ -15,6 +15,10 @@ const router = createHashRouter([
     children: [
       {
         path: "/",
+        Component: () => <p>Select a dialog.</p>,
+      },
+      {
+        path: "/dialogs/:dialogId",
         Component: Chat,
       },
     ],

@@ -52,6 +52,7 @@ describe("chat store", () => {
     await allSettled(receiveAgentStream, {
       scope,
       params: {
+        dialogId: "dialog-1",
         requestId: "request-1",
         type: "source",
         sourceId: "https://example.com/article",
@@ -63,6 +64,7 @@ describe("chat store", () => {
     await allSettled(receiveAgentStream, {
       scope,
       params: {
+        dialogId: "dialog-1",
         requestId: "request-1",
         type: "tool",
         toolCallId: "tool-1",
@@ -76,6 +78,7 @@ describe("chat store", () => {
     await allSettled(receiveAgentStream, {
       scope,
       params: {
+        dialogId: "dialog-1",
         requestId: "request-1",
         type: "tool",
         toolCallId: "tool-1",
@@ -89,15 +92,30 @@ describe("chat store", () => {
 
     await allSettled(receiveAgentStream, {
       scope,
-      params: { requestId: "request-1", type: "reasoning", content: "Think " },
+      params: {
+        dialogId: "dialog-1",
+        requestId: "request-1",
+        type: "reasoning",
+        content: "Think ",
+      },
     });
     await allSettled(receiveAgentStream, {
       scope,
-      params: { requestId: "request-1", type: "reasoning", content: "first" },
+      params: {
+        dialogId: "dialog-1",
+        requestId: "request-1",
+        type: "reasoning",
+        content: "first",
+      },
     });
     await allSettled(receiveAgentStream, {
       scope,
-      params: { requestId: "request-1", type: "response", content: "Hello" },
+      params: {
+        dialogId: "dialog-1",
+        requestId: "request-1",
+        type: "response",
+        content: "Hello",
+      },
     });
     expect(scope.getState($agentStream)).toEqual({
       requestId: "request-1",

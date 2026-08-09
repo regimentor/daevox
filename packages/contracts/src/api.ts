@@ -9,28 +9,33 @@ import {
   AgentToolCallSchema,
   MessageSchema,
 } from "./message.js";
+import type { DialogSummary, NewMessageEvent } from "./dialogs.js";
 
-type NewMessageListener = (message: Message) => void;
+type NewMessageListener = (event: NewMessageEvent) => void;
 
 const AgentStreamEventSchema = z.discriminatedUnion("type", [
   z.object({
+    dialogId: z.string(),
     requestId: z.string(),
     type: z.literal("reasoning"),
     content: z.string(),
   }),
   z.object({
+    dialogId: z.string(),
     requestId: z.string(),
     type: z.literal("response"),
     content: z.string(),
   }),
   z
     .object({
+      dialogId: z.string(),
       requestId: z.string(),
       type: z.literal("tool"),
     })
     .extend(AgentToolCallSchema.shape),
   z
     .object({
+      dialogId: z.string(),
       requestId: z.string(),
       type: z.literal("source"),
     })
@@ -45,7 +50,9 @@ const NextCompletionSchema = z.object({
   message: MessageSchema,
 });
 
-const NextCompletionTransportRequestSchema = NextCompletionSchema.extend({
+const NextCompletionTransportRequestSchema = z.object({
+  dialogId: z.string(),
+  message: MessageSchema,
   requestId: z.string(),
 });
 
@@ -56,15 +63,27 @@ type NextCompletionTransportRequest = z.infer<
 
 const nextCompletionChannel = "next-completion";
 const agentStreamChannel = "agent-stream";
+const listDialogsChannel = "list-dialogs";
+const createDialogChannel = "create-dialog";
+const getDialogMessagesChannel = "get-dialog-messages";
+const deleteDialogChannel = "delete-dialog";
 
 interface Api {
-  addMessage(message: Message): Promise<void>;
+  listDialogs(): Promise<DialogSummary[]>;
+  createDialog(): Promise<DialogSummary>;
+  getDialogMessages(dialogId: string): Promise<Message[]>;
+  deleteDialog(dialogId: string): Promise<void>;
+  addMessage(dialogId: string, message: Message): Promise<void>;
   onAgentStream(listener: AgentStreamListener): void;
   onNewMessage(listener: NewMessageListener): void;
 }
 
 export {
   AgentStreamEventSchema,
+  createDialogChannel,
+  deleteDialogChannel,
+  getDialogMessagesChannel,
+  listDialogsChannel,
   NextCompletionSchema,
   NextCompletionTransportRequestSchema,
   agentStreamChannel,
@@ -75,6 +94,8 @@ export type {
   AgentGenerationMetrics,
   AgentStreamListener,
   Api,
+  DialogSummary,
+  NewMessageEvent,
   NewMessageListener,
   NextCompletionRequest,
   NextCompletionTransportRequest,

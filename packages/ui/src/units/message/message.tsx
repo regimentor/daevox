@@ -12,7 +12,6 @@ import type {
 import { Thinking, type ThinkingProps } from "../thinking/index.js";
 import { ToolCalls } from "../tool-calls/index.js";
 import { GenerationMetrics } from "./generation-metrics.js";
-import { CopyIcon } from "./assets/copy.js";
 import { Sources } from "../sources/index.js";
 import styles from "./message.module.css";
 
@@ -121,20 +120,18 @@ const CodeBlock = ({ code, language, children }: CodeBlockProps) => {
 
   return (
     <div className={styles.codeBlock}>
-      {language ? <span className={styles.codeLanguage}>{language}</span> : null}
+      {language ? (
+        <span className={styles.codeLanguage}>{language}</span>
+      ) : null}
       <button
         type="button"
         className={styles.codeCopyButton}
         aria-label={copied ? "Code copied" : "Copy code"}
         onClick={() => void handleCopy()}
       >
-        <CopyIcon
-          aria-hidden="true"
-          focusable="false"
-          className={styles.copyIcon}
-          width={14}
-          height={14}
-        />
+        <span className={styles.copyIcon} aria-hidden="true">
+          {"\uf0c5"}
+        </span>
         <span>{copied ? "Copied" : "Copy"}</span>
       </button>
       <div className={styles.codeContent}>{children}</div>
@@ -243,13 +240,9 @@ const Message = ({
         aria-label="Copy message"
         onClick={handleCopy}
       >
-        <CopyIcon
-          aria-hidden="true"
-          focusable="false"
-          className={styles.copyIcon}
-          width={14}
-          height={14}
-        />
+        <span className={styles.copyIcon} aria-hidden="true">
+          {"\uf0c5"}
+        </span>
       </button>
     </div>
   );

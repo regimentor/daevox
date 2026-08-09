@@ -43,7 +43,7 @@
 
 .name {
   color: var(--foreground);
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: "Monoid Nerd Font Mono", ui-monospace, monospace;
   font-size: 0.75rem;
 }
 

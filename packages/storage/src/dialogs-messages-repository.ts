@@ -1,11 +1,9 @@
-import type { Message } from "@daevox/contracts";
+import {
+  type CreateDialogsMessageInput,
+  type Message,
+} from "@daevox/contracts";
 import type { PrismaClient } from "./generated/prisma/client.js";
 import { Prisma } from "./generated/prisma/client.js";
-
-type CreateDialogsMessageInput = {
-  dialogId: string;
-  message: Message;
-};
 
 class DialogsMessagesRepository {
   constructor(private readonly client: PrismaClient) {}
@@ -58,4 +56,3 @@ class DialogsMessagesRepository {
 }
 
 export { DialogsMessagesRepository };
-export type { CreateDialogsMessageInput };

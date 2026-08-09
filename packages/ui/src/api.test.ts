@@ -1,4 +1,9 @@
-import type { Api, Message, NewMessageListener } from "@daevox/contracts";
+import type {
+  Api,
+  DialogSummary,
+  Message,
+  NewMessageListener,
+} from "@daevox/contracts";
 import { describe, expect, test, vi } from "vitest";
 
 const message: Message = {
@@ -6,6 +11,12 @@ const message: Message = {
   type: "completion",
   content: "Hi!",
   createdAt: new Date("2026-08-08T10:00:01.000Z"),
+};
+
+const dialog: DialogSummary = {
+  id: "dialog-1",
+  createdAt: new Date("2026-08-08T09:00:00.000Z"),
+  updatedAt: new Date("2026-08-08T09:00:00.000Z"),
 };
 
 const loadApi = async () => {
@@ -32,6 +43,10 @@ const createImplementation = () => {
     listeners.push(listener);
   });
   const implementation: Api = {
+    listDialogs: vi.fn().mockResolvedValue([dialog]),
+    createDialog: vi.fn().mockResolvedValue(dialog),
+    getDialogMessages: vi.fn().mockResolvedValue([]),
+    deleteDialog: vi.fn().mockResolvedValue(undefined),
     addMessage,
     onAgentStream: vi.fn(),
     onNewMessage,
@@ -49,10 +64,10 @@ describe("UiApi", () => {
     expect(uiApi.isConfigured()).toBe(false);
 
     uiApi.onNewMessage(listener);
-    await uiApi.addMessage(message);
+    await uiApi.addMessage(dialog.id, message);
 
     expect(listener).toHaveBeenCalledOnce();
-    expect(listener).toHaveBeenCalledWith(message);
+    expect(listener).toHaveBeenCalledWith({ dialogId: dialog.id, message });
   });
 
   test("forwards existing and new listeners to the implementation", async () => {
@@ -77,10 +92,10 @@ describe("UiApi", () => {
 
     uiApi.onNewMessage(listener);
     uiApi.setImplementation(implementation);
-    await uiApi.addMessage(message);
+    await uiApi.addMessage(dialog.id, message);
 
     expect(addMessage).toHaveBeenCalledOnce();
-    expect(addMessage).toHaveBeenCalledWith(message);
+    expect(addMessage).toHaveBeenCalledWith(dialog.id, message);
     expect(listener).not.toHaveBeenCalled();
   });
 });

@@ -29,7 +29,9 @@ describe("Message", () => {
     );
     expect(footer?.children.item(0)?.querySelector("button")).not.toBeNull();
     expect(footer?.querySelector("img")).toBeNull();
-    expect(footer?.querySelector("svg")).not.toBeNull();
+    expect(footer?.querySelector(`.${styles.copyIcon!}`)?.textContent).toBe(
+      "",
+    );
     expect(
       footer?.children.item(1)?.classList.contains(styles.timestamp!),
     ).toBe(true);
@@ -109,9 +111,9 @@ describe("Message", () => {
       unknown.querySelector(`.${styles.codeBlock} code`)?.textContent,
     ).toContain("plain text");
 
-    expect(
-      unknown.querySelector(`.${styles.codeLanguage}`)?.textContent,
-    ).toBe("unknown-language");
+    expect(unknown.querySelector(`.${styles.codeLanguage}`)?.textContent).toBe(
+      "unknown-language",
+    );
 
     const unlabeled = await render(
       <Message author="Daevox" timestamp="12:34">

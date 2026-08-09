@@ -15,12 +15,20 @@ describe("DialogsRepository", () => {
     await database.cleanup();
   });
 
-  test("creates and lists dialogs", async () => {
-    const dialog = await dialogs.create({
+  test("creates, lists newest dialogs first, and deletes dialogs", async () => {
+    const olderDialog = await dialogs.create({
       createdAt: new Date("2026-08-09T09:00:00.000Z"),
     });
+    const newerDialog = await dialogs.create({
+      createdAt: new Date("2026-08-09T10:00:00.000Z"),
+    });
 
-    expect(await dialogs.findById(dialog.id)).toMatchObject({ id: dialog.id });
-    expect(await dialogs.findMany()).toEqual([dialog]);
+    expect(await dialogs.findById(newerDialog.id)).toMatchObject({
+      id: newerDialog.id,
+    });
+    expect(await dialogs.findMany()).toEqual([newerDialog, olderDialog]);
+
+    await dialogs.delete(olderDialog.id);
+    expect(await dialogs.findById(olderDialog.id)).toBeNull();
   });
 });

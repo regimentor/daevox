@@ -258,6 +258,10 @@ describe("Chat", () => {
     const addMessage = vi.fn(() => request);
 
     uiApi.setImplementation({
+      listDialogs: vi.fn().mockResolvedValue([]),
+      createDialog: vi.fn(),
+      getDialogMessages: vi.fn().mockResolvedValue([]),
+      deleteDialog: vi.fn().mockResolvedValue(undefined),
       addMessage,
       onAgentStream: vi.fn(),
       onNewMessage: vi.fn(),
@@ -295,6 +299,10 @@ describe("Chat", () => {
       .mockRejectedValue(new Error("Agent unavailable"));
 
     uiApi.setImplementation({
+      listDialogs: vi.fn().mockResolvedValue([]),
+      createDialog: vi.fn(),
+      getDialogMessages: vi.fn().mockResolvedValue([]),
+      deleteDialog: vi.fn().mockResolvedValue(undefined),
       addMessage,
       onAgentStream: vi.fn(),
       onNewMessage: vi.fn(),

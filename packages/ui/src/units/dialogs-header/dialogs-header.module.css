@@ -1,0 +1,27 @@
+.heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.heading h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.newDialogButton {
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  font-family: "Monoid Nerd Font Mono", ui-monospace, monospace;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.newDialogIcon {
+  display: block;
+  font-family: inherit;
+  font-weight: 400;
+  line-height: 1;
+}

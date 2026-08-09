@@ -7,6 +7,7 @@ type MessageHistoryProps = {
   messages: ChatMessage[];
   agentStream: AgentStreamState | null;
   isSending: boolean;
+  isLoading?: boolean;
 };
 
 const formatTimestamp = (createdAt: Date) =>
@@ -76,6 +77,7 @@ const MessageHistory = ({
   messages,
   agentStream,
   isSending,
+  isLoading = false,
 }: MessageHistoryProps) => {
   const liveAgent =
     agentStream !== null &&
@@ -105,7 +107,8 @@ const MessageHistory = ({
       aria-live="polite"
       aria-label="Message history"
     >
-      {messages.length === 0 && !liveAgent && (
+      {isLoading && <p className={styles.empty}>Loading messages…</p>}
+      {!isLoading && messages.length === 0 && !liveAgent && (
         <p className={styles.empty}>No messages yet.</p>
       )}
       <>

@@ -1,7 +1,9 @@
 import type {
   AgentStreamListener,
   Api,
+  DialogSummary,
   Message,
+  NewMessageEvent,
   NewMessageListener,
 } from "@daevox/contracts";
 
@@ -33,15 +35,37 @@ class UiApi {
     return this.implementation !== undefined;
   }
 
-  async addMessage(message: Message): Promise<void> {
+  async listDialogs(): Promise<DialogSummary[]> {
+    return this.implementation?.listDialogs() ?? [];
+  }
+
+  async createDialog(): Promise<DialogSummary> {
     if (this.implementation) {
-      await this.implementation.addMessage(message);
+      return this.implementation.createDialog();
+    }
+
+    throw new Error("Dialog API is unavailable");
+  }
+
+  async getDialogMessages(dialogId: string): Promise<Message[]> {
+    return this.implementation?.getDialogMessages(dialogId) ?? [];
+  }
+
+  async deleteDialog(dialogId: string): Promise<void> {
+    if (this.implementation) {
+      await this.implementation.deleteDialog(dialogId);
+    }
+  }
+
+  async addMessage(dialogId: string, message: Message): Promise<void> {
+    if (this.implementation) {
+      await this.implementation.addMessage(dialogId, message);
       return;
     }
 
     // This keeps the UI usable in isolation (for example in Storybook). The
     // client replaces this fallback through setImplementation before startup.
-    this.notifyListeners(message);
+    this.notifyListeners({ dialogId, message });
   }
 
   onAgentStream(listener: AgentStreamListener): void {
@@ -60,9 +84,9 @@ class UiApi {
     }
   }
 
-  private notifyListeners(message: Message): void {
+  private notifyListeners(event: NewMessageEvent): void {
     for (const listener of this.listeners) {
-      listener(message);
+      listener(event);
     }
   }
 }

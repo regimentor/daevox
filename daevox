@@ -69,6 +69,9 @@ echo "[daevox] Applying storage migrations..."
     npm run migrate
 )
 
+echo "[daevox] Rebuilding native modules for Electron..."
+npx @electron/rebuild -w better-sqlite3 -v 43.3.0
+
 echo "[daevox] Starting web_search (logs below)..."
 (
     cd "$ROOT_DIR/external/web_search"

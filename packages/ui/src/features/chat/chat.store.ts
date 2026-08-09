@@ -4,12 +4,17 @@ import {
   MessageSchema,
   type AgentStreamEvent,
   type Message,
+  type NewMessageEvent,
 } from "@daevox/contracts";
-import { createEvent, createStore } from "effector";
+import { createEvent, createStore, sample } from "effector";
 import { uiApi } from "../../api.js";
 
 const addMessage = createEvent<Message>();
+const replaceMessages = createEvent<Message[]>();
+const setActiveDialog = createEvent<string | null>();
 const receiveAgentStream = createEvent<AgentStreamEvent>();
+const receiveExternalAgentStream = createEvent<AgentStreamEvent>();
+const receiveExternalMessage = createEvent<NewMessageEvent>();
 const clearAgentStream = createEvent();
 
 type AgentStreamState = {
@@ -21,9 +26,18 @@ type AgentStreamState = {
   status: "streaming" | "complete";
 };
 
-const $messages = createStore<Message[]>([]).on(
-  addMessage,
-  (messages, message) => [...messages, MessageSchema.parse(message)],
+const $messages = createStore<Message[]>([])
+  .on(addMessage, (messages, message) => [
+    ...messages,
+    MessageSchema.parse(message),
+  ])
+  .on(replaceMessages, (_, messages) =>
+    messages.map((message) => MessageSchema.parse(message)),
+  );
+
+const $activeDialogId = createStore<string | null>(null).on(
+  setActiveDialog,
+  (_, dialogId) => dialogId,
 );
 
 const $agentStream = createStore<AgentStreamState | null>(null)
@@ -99,8 +113,23 @@ const $agentStream = createStore<AgentStreamState | null>(null)
   })
   .reset(clearAgentStream);
 
-uiApi.onNewMessage(addMessage);
-uiApi.onAgentStream(receiveAgentStream);
+sample({
+  source: $activeDialogId,
+  clock: receiveExternalMessage,
+  filter: (dialogId, event) => dialogId === event.dialogId,
+  fn: (_, event) => event.message,
+  target: addMessage,
+});
+sample({
+  source: $activeDialogId,
+  clock: receiveExternalAgentStream,
+  filter: (dialogId, event) => dialogId === event.dialogId,
+  fn: (_, event) => event,
+  target: receiveAgentStream,
+});
+
+uiApi.onNewMessage(receiveExternalMessage);
+uiApi.onAgentStream(receiveExternalAgentStream);
 
 type ChatMessage = Message;
 type ChatMessageActor = Message["actor"];
@@ -108,10 +137,13 @@ type ChatMessageType = Message["type"];
 
 export {
   $agentStream,
+  $activeDialogId,
   $messages,
   addMessage,
   clearAgentStream,
+  replaceMessages,
   receiveAgentStream,
+  setActiveDialog,
 };
 export type {
   AgentStreamState,

@@ -132,6 +132,7 @@
   border-radius: 0.5rem;
   background: #1e2430;
   color: #d6deeb;
+  font-family: "Monoid Nerd Font Mono", ui-monospace, monospace;
 }
 
 .codeContent {
@@ -143,9 +144,7 @@
   top: 0.75rem;
   left: 1rem;
   color: #9eabc0;
-  font-family:
-    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
-    "Courier New", monospace;
+  font-family: "Monoid Nerd Font Mono", ui-monospace, monospace;
   font-size: 0.6875rem;
   line-height: 1;
 }
@@ -180,9 +179,7 @@
 }
 
 .body :global(code) {
-  font-family:
-    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
-    "Courier New", monospace;
+  font-family: "Monoid Nerd Font Mono", ui-monospace, monospace;
   font-size: 0.8125rem;
 }
 
@@ -261,8 +258,11 @@
 
 .copyIcon {
   display: block;
-  width: 0.875rem;
-  height: 0.875rem;
+  color: currentColor;
+  font-family: "Monoid Nerd Font Mono", ui-monospace, monospace;
+  font-size: 0.875rem;
+  font-weight: 400;
+  line-height: 1;
 }
 
 .timestamp {
