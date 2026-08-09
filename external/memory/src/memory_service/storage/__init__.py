@@ -1,0 +1,1 @@
+"""Vault and Markdown storage."""
