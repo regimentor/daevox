@@ -3,6 +3,7 @@ import type { AgentToolCall } from "@daevox/contracts";
 const maxLogValueLength = 1_000;
 
 type ToolEventListener = (event: AgentToolCall) => void;
+type ToolResultListener = (toolName: string, result: unknown) => void;
 
 const formatLogValue = (value: unknown): string => {
   let serialized: string | undefined;
@@ -23,7 +24,10 @@ const formatLogValue = (value: unknown): string => {
 };
 
 class ToolLogger {
-  constructor(private readonly onToolEvent?: ToolEventListener) {}
+  constructor(
+    private readonly onToolEvent?: ToolEventListener,
+    private readonly onToolResult?: ToolResultListener,
+  ) {}
 
   async run<Result>(
     toolName: string,
@@ -51,6 +55,7 @@ class ToolLogger {
 
     try {
       const result = await serviceCall();
+      this.onToolResult?.(toolName, result);
 
       console.info("[agent] tool result", {
         event: "tool_result",
@@ -94,4 +99,4 @@ class ToolLogger {
 }
 
 export { ToolLogger };
-export type { AgentToolCall, ToolEventListener };
+export type { AgentToolCall, ToolEventListener, ToolResultListener };

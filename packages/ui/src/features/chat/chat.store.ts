@@ -1,4 +1,5 @@
 import {
+  type AgentSource,
   type AgentToolCall,
   MessageSchema,
   type AgentStreamEvent,
@@ -16,6 +17,7 @@ type AgentStreamState = {
   reasoning: string;
   response: string;
   tools: AgentToolCall[];
+  sources: AgentSource[];
   status: "streaming" | "complete";
 };
 
@@ -34,6 +36,7 @@ const $agentStream = createStore<AgentStreamState | null>(null)
             reasoning: "",
             response: "",
             tools: [],
+            sources: [],
             status: "streaming" as const,
           };
 
@@ -58,6 +61,27 @@ const $agentStream = createStore<AgentStreamState | null>(null)
             : nextState.tools.map((existingTool, index) =>
                 index === toolIndex ? tool : existingTool,
               ),
+      };
+    }
+
+    if (event.type === "source") {
+      if (
+        nextState.sources.some((source) => source.sourceId === event.sourceId)
+      ) {
+        return nextState;
+      }
+
+      return {
+        ...nextState,
+        sources: [
+          ...nextState.sources,
+          {
+            sourceId: event.sourceId,
+            title: event.title,
+            url: event.url,
+            domain: event.domain,
+          },
+        ],
       };
     }
 

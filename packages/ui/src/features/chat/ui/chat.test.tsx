@@ -130,6 +130,7 @@ describe("Chat", () => {
           error: "",
         },
       ],
+      sources: [],
       status: "streaming",
     });
 
@@ -145,7 +146,61 @@ describe("Chat", () => {
     expect(
       article?.querySelector('[aria-label="Tool calls"]')?.textContent,
     ).toContain("web_search");
+    expect(
+      article?.querySelector('[aria-label="Generation metrics"]'),
+    ).toBeNull();
     expect(container.querySelector("form details")).toBeNull();
+  });
+
+  test("does not render an empty thinking block on a completed response", async () => {
+    const messages: ChatMessage[] = [
+      {
+        actor: "agent",
+        type: "completion",
+        content: "The response",
+        createdAt: new Date("2026-08-08T10:30:04.000Z"),
+      },
+    ];
+    const { container } = await renderChat(messages, undefined, {
+      requestId: "request-1",
+      reasoning: "",
+      response: "",
+      tools: [],
+      sources: [],
+      status: "complete",
+    });
+
+    expect(container.querySelectorAll("article")).toHaveLength(1);
+    expect(container.querySelector("article details")).toBeNull();
+  });
+
+  test("renders generation metrics on the completed agent message", async () => {
+    const messages: ChatMessage[] = [
+      {
+        actor: "agent",
+        type: "completion",
+        content: "The response",
+        createdAt: new Date("2026-08-08T10:30:04.000Z"),
+        metrics: {
+          completionTokens: 42,
+          durationMs: 3500,
+          tokensPerSecond: 12,
+          estimated: false,
+        },
+      },
+    ];
+    const { container } = await renderChat(messages, undefined, {
+      requestId: "request-1",
+      reasoning: "",
+      response: "",
+      tools: [],
+      sources: [],
+      status: "complete",
+    });
+
+    expect(
+      container.querySelector('[aria-label="Generation metrics"]')?.textContent,
+    ).toContain("42 tokens · 12.0 tok/s");
   });
 
   test("scrolls the page to the newest stream content", async () => {
@@ -195,7 +250,7 @@ describe("Chat", () => {
     }
   });
 
-  test("shows a thinking message while a configured agent is responding", async () => {
+  test("does not create an empty live message before streaming starts", async () => {
     let resolveRequest!: () => void;
     const request = new Promise<void>((resolve) => {
       resolveRequest = resolve;
@@ -226,9 +281,7 @@ describe("Chat", () => {
     });
 
     expect(addMessage).toHaveBeenCalledOnce();
-    expect(container.querySelector("article details")?.textContent).toContain(
-      "Daevox is thinking…",
-    );
+    expect(container.querySelectorAll("article")).toHaveLength(0);
 
     await act(async () => {
       resolveRequest();

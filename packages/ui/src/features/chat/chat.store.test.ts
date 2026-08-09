@@ -53,6 +53,17 @@ describe("chat store", () => {
       scope,
       params: {
         requestId: "request-1",
+        type: "source",
+        sourceId: "https://example.com/article",
+        title: "Example article",
+        url: "https://example.com/article",
+        domain: "example.com",
+      },
+    });
+    await allSettled(receiveAgentStream, {
+      scope,
+      params: {
+        requestId: "request-1",
         type: "tool",
         toolCallId: "tool-1",
         name: "web_search",
@@ -88,7 +99,6 @@ describe("chat store", () => {
       scope,
       params: { requestId: "request-1", type: "response", content: "Hello" },
     });
-
     expect(scope.getState($agentStream)).toEqual({
       requestId: "request-1",
       reasoning: "Think first",
@@ -101,6 +111,14 @@ describe("chat store", () => {
           status: "complete",
           durationMs: 12,
           error: "",
+        },
+      ],
+      sources: [
+        {
+          sourceId: "https://example.com/article",
+          title: "Example article",
+          url: "https://example.com/article",
+          domain: "example.com",
         },
       ],
       status: "streaming",
@@ -120,6 +138,14 @@ describe("chat store", () => {
           status: "complete",
           durationMs: 12,
           error: "",
+        },
+      ],
+      sources: [
+        {
+          sourceId: "https://example.com/article",
+          title: "Example article",
+          url: "https://example.com/article",
+          domain: "example.com",
         },
       ],
       status: "complete",

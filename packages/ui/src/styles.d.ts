@@ -3,9 +3,3 @@ declare module "*.css" {
 
   export default styles;
 }
-
-declare module "*.svg" {
-  const src: string;
-
-  export default src;
-}

@@ -5,6 +5,7 @@ set -eu
 ROOT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 WEB_SEARCH_PID=
 DESKTOP_PID=
+DIEVOX_MODEL=unsloth/GLM-4.7-Flash-GGUF:UD-Q4_K_XL
 
 cleanup() {
     status=$?

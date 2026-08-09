@@ -1,6 +1,14 @@
 import { z } from "zod";
-import type { AgentToolCall, Message } from "./message.js";
-import { AgentToolCallSchema, MessageSchema } from "./message.js";
+import type {
+  AgentGenerationMetrics,
+  AgentToolCall,
+  Message,
+} from "./message.js";
+import {
+  AgentSourceSchema,
+  AgentToolCallSchema,
+  MessageSchema,
+} from "./message.js";
 
 type NewMessageListener = (message: Message) => void;
 
@@ -21,6 +29,12 @@ const AgentStreamEventSchema = z.discriminatedUnion("type", [
       type: z.literal("tool"),
     })
     .extend(AgentToolCallSchema.shape),
+  z
+    .object({
+      requestId: z.string(),
+      type: z.literal("source"),
+    })
+    .extend(AgentSourceSchema.shape),
 ]);
 
 type AgentStreamEvent = z.infer<typeof AgentStreamEventSchema>;
@@ -58,6 +72,7 @@ export {
 };
 export type {
   AgentStreamEvent,
+  AgentGenerationMetrics,
   AgentStreamListener,
   Api,
   NewMessageListener,

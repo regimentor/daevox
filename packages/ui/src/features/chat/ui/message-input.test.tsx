@@ -119,6 +119,10 @@ describe('MessageInput', () => {
     const textarea = container.querySelector<HTMLTextAreaElement>('textarea')!;
     const submit = container.querySelector<HTMLButtonElement>('button')!;
 
+    expect(textarea.parentElement?.classList.contains(styles.sending!)).toBe(
+      true,
+    );
+
     await changeContent(textarea, 'Keep this draft');
     expect(submit.disabled).toBe(true);
 

@@ -15,15 +15,71 @@ const formatTimestamp = (createdAt: Date) =>
     minute: "2-digit",
   });
 
+const getAuthorProps = (isUserMessage: boolean) => {
+  if (isUserMessage) {
+    return {
+      alignment: "right" as const,
+      author: "You" as const,
+    };
+  }
+
+  return {
+    alignment: "left" as const,
+    author: "Daevox" as const,
+  };
+};
+
+const getMessageProps = (
+  message: ChatMessage,
+  index: number,
+  messagesLength: number,
+  agentStream: AgentStreamState | null,
+) => {
+  const isUserMessage = message.actor === "user";
+  const isCompletedLastAgentMessage =
+    message.actor === "agent" &&
+    index === messagesLength - 1 &&
+    agentStream?.status === "complete";
+  const hasReasoning = Boolean(agentStream?.reasoning.trim());
+
+  return {
+    ...getAuthorProps(isUserMessage),
+    timestamp: formatTimestamp(message.createdAt),
+    ...(message.tools?.length && {
+      tools: message.tools,
+      toolsComplete: true,
+    }),
+    ...(message.sources?.length && {
+      sources: message.sources,
+      sourcesComplete: true,
+    }),
+    ...(message.metrics && {
+      metrics: message.metrics,
+    }),
+    ...(isCompletedLastAgentMessage &&
+      agentStream && {
+        ...(hasReasoning
+          ? {
+              thinking: {
+                content: agentStream.reasoning,
+                isComplete: true,
+              },
+            }
+          : {}),
+        tools: agentStream.tools,
+        toolsComplete: true,
+      }),
+  };
+};
+
 const MessageHistory = ({
   messages,
   agentStream,
   isSending,
 }: MessageHistoryProps) => {
   const liveAgent =
-    (isSending && agentStream?.status !== "complete") ||
-    agentStream?.status === "streaming" ||
-    Boolean(agentStream?.response);
+    agentStream !== null &&
+    (agentStream.status === "streaming" || Boolean(agentStream.response));
 
   useLayoutEffect(() => {
     const scrollPageToBottom = () => {
@@ -49,57 +105,45 @@ const MessageHistory = ({
       aria-live="polite"
       aria-label="Message history"
     >
-      {messages.length === 0 && !liveAgent ? (
+      {messages.length === 0 && !liveAgent && (
         <p className={styles.empty}>No messages yet.</p>
-      ) : (
-        <>
-          {messages.map((message, index) => (
-            <Message
-              key={`${message.createdAt.toISOString()}-${index}`}
-              alignment={message.actor === "user" ? "right" : "left"}
-              author={message.actor === "user" ? "You" : "Daevox"}
-              timestamp={formatTimestamp(message.createdAt)}
-              {...(message.tools?.length
-                ? { tools: message.tools, toolsComplete: true }
-                : {})}
-              {...(message.actor === "agent" &&
-              index === messages.length - 1 &&
-              agentStream?.status === "complete"
-                ? {
-                    thinking: {
-                      content: agentStream.reasoning,
-                      isComplete: true,
-                    },
-                    tools: agentStream.tools,
-                    toolsComplete: true,
-                  }
-                : {})}
-            >
-              {message.content}
-            </Message>
-          ))}
-          {liveAgent ? (
-            <Message
-              key={agentStream?.requestId ?? "pending-agent"}
-              alignment="left"
-              author="Daevox"
-              timestamp={formatTimestamp(new Date())}
-              thinking={{
-                content: agentStream?.reasoning ?? "",
-                isComplete: agentStream?.status === "complete",
-              }}
-              {...(agentStream?.tools.length
-                ? {
-                    tools: agentStream.tools,
-                    toolsComplete: agentStream.status === "complete",
-                  }
-                : {})}
-            >
-              {agentStream?.response ?? ""}
-            </Message>
-          ) : null}
-        </>
       )}
+      <>
+        {messages.map((message, index) => (
+          <Message
+            key={`${message.createdAt.toISOString()}-${index}`}
+            {...getMessageProps(message, index, messages.length, agentStream)}
+          >
+            {message.content}
+          </Message>
+        ))}
+        {liveAgent && (
+          <Message
+            key={agentStream?.requestId ?? "pending-agent"}
+            alignment="left"
+            author="Daevox"
+            timestamp={formatTimestamp(new Date())}
+            {...(agentStream?.reasoning.trim()
+              ? {
+                  thinking: {
+                    content: agentStream.reasoning,
+                    isComplete: agentStream.status === "complete",
+                  },
+                }
+              : {})}
+            {...(agentStream?.tools.length && {
+              tools: agentStream.tools,
+              toolsComplete: agentStream.status === "complete",
+            })}
+            {...(agentStream?.sources.length && {
+              sources: agentStream.sources,
+              sourcesComplete: agentStream.status === "complete",
+            })}
+          >
+            {agentStream?.response ?? ""}
+          </Message>
+        )}
+      </>
     </div>
   );
 };

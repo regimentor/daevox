@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from "electron";
+import { app, BrowserWindow, shell } from "electron";
 import { fileURLToPath } from "node:url";
 import { registerIpcHandlers } from "./register-ipc-handlers.js";
 
@@ -11,6 +11,14 @@ const createWindow = () => {
       contextIsolation: true,
       nodeIntegration: false,
     },
+  });
+
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    if (/^https?:\/\//i.test(url)) {
+      void shell.openExternal(url);
+    }
+
+    return { action: "deny" };
   });
 
   const indexPath = fileURLToPath(

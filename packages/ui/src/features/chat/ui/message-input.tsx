@@ -47,6 +47,7 @@ const MessageInput = ({
     <form className={styles.root} onSubmit={handleSubmit}>
       <Textarea
         aria-label="Message"
+        {...(isSending ? { className: styles.sending } : {})}
         placeholder="Write a message..."
         value={content}
         onChange={(event) => setContent(event.target.value)}

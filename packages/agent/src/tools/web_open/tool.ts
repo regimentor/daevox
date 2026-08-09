@@ -7,7 +7,7 @@ const createWebOpenTool = (logger = new ToolLogger()) =>
   zodFunction({
     name: "web_open",
     description:
-      "Open a public HTTP/HTTPS URL and return its readable content as Markdown. Use browser rendering when JavaScript execution is required.",
+      "Open a public HTTP/HTTPS URL and return its readable content as Markdown with source metadata (url, final_url, canonical_url, title). Use browser rendering when JavaScript execution is required. The application aggregates this metadata as sources on the assistant message.",
     parameters: WebOpenToolRequestSchema,
     function: async (input) => {
       const request = {

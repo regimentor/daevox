@@ -45,6 +45,15 @@ const registerIpcHandlers = () => {
                 ...tool,
               }),
             ),
+          onSource: (source) =>
+            event.sender.send(
+              agentStreamChannel,
+              AgentStreamEventSchema.parse({
+                requestId,
+                type: "source",
+                ...source,
+              }),
+            ),
         },
       );
     } catch (error) {

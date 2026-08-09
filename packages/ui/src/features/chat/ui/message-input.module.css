@@ -32,3 +32,27 @@
   outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
+
+.sending textarea {
+  animation: sending-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes sending-pulse {
+  0%,
+  100% {
+    border-color: var(--border);
+    box-shadow: 0 0 0 0 color-mix(in oklch, var(--accent) 0%, transparent);
+  }
+
+  50% {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 0.25rem color-mix(in oklch, var(--accent) 18%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sending textarea {
+    animation: none;
+    border-color: var(--accent);
+  }
+}

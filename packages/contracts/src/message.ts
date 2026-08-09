@@ -9,16 +9,39 @@ const AgentToolCallSchema = z.object({
   error: z.string(),
 });
 
+const AgentSourceSchema = z.object({
+  sourceId: z.string().min(1),
+  title: z.string().min(1),
+  url: z.string().url(),
+  domain: z.string().min(1),
+});
+
+const AgentGenerationMetricsSchema = z.object({
+  completionTokens: z.number().int().nonnegative(),
+  durationMs: z.number().int().nonnegative(),
+  tokensPerSecond: z.number().nonnegative(),
+  estimated: z.boolean(),
+});
+
 const MessageSchema = z.object({
   actor: z.enum(["user", "agent"]),
   type: z.literal(["completion", "user"]),
   content: z.string(),
   createdAt: z.date(),
   tools: z.array(AgentToolCallSchema).optional(),
+  sources: z.array(AgentSourceSchema).optional(),
+  metrics: AgentGenerationMetricsSchema.optional(),
 });
 
 type Message = z.infer<typeof MessageSchema>;
 type AgentToolCall = z.infer<typeof AgentToolCallSchema>;
+type AgentSource = z.infer<typeof AgentSourceSchema>;
+type AgentGenerationMetrics = z.infer<typeof AgentGenerationMetricsSchema>;
 
-export { AgentToolCallSchema, MessageSchema };
-export type { AgentToolCall, Message };
+export {
+  AgentGenerationMetricsSchema,
+  AgentSourceSchema,
+  AgentToolCallSchema,
+  MessageSchema,
+};
+export type { AgentGenerationMetrics, AgentSource, AgentToolCall, Message };

@@ -1,17 +1,25 @@
 import OpenAI from "openai";
 import type { AgentToolCall } from "@daevox/contracts";
+import { GenerationMetricsTracker } from "./src/metrics.js";
 import { AgentToolService } from "./src/tools/index.js";
 
 type LocalDelta = {
   role?: string;
   content?: string | null;
   reasoning_content?: string | null;
+  tool_calls?: Array<{
+    function?: {
+      name?: string | null;
+      arguments?: string | null;
+    };
+  }>;
 };
 
 type AgentArg = {
   onReasoningPipe?: (reasoning: string) => void;
   onResponsePipe?: (response: string) => void;
   onToolEvent?: (event: AgentToolCall) => void;
+  onToolResult?: (toolName: string, result: unknown) => void;
 };
 
 type AgentMessage = {
@@ -46,6 +54,7 @@ function createAgent({
     onReasoningPipe,
     onResponsePipe,
     onToolEvent,
+    onToolResult,
   }: AgentArg) {
     console.log(`Agent ${name} is running...`);
 
@@ -62,6 +71,7 @@ function createAgent({
         reasoning_effort: "low",
         max_tokens: maxCompletionTokens,
         stream: true as const,
+        stream_options: { include_usage: true },
         messages: [
           {
             role: "system",
@@ -69,15 +79,18 @@ function createAgent({
           },
           ...conversation,
         ],
-        tools: new AgentToolService(onToolEvent).tools,
+        tools: new AgentToolService(onToolEvent, onToolResult).tools,
       },
-      { maxChatCompletions: maxToolRounds },
+      // { maxChatCompletions: maxToolRounds },
     );
 
     const response: string[] = [];
     const reasoning: string[] = [];
+    const metrics = new GenerationMetricsTracker();
 
     for await (const part of completion) {
+      metrics.observe(part);
+
       const delta = part.choices[0]?.delta as LocalDelta;
 
       if (delta?.content) {
@@ -91,9 +104,13 @@ function createAgent({
       }
     }
 
+    const usage = await completion.totalUsage();
+    const finalMetrics = metrics.finalize(usage.completion_tokens);
+
     return {
       response: response.join(""),
       reasoning: reasoning.join(""),
+      metrics: finalMetrics,
     };
   };
 }
