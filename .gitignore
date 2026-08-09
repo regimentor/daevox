@@ -10,3 +10,4 @@ storybook-static
 .vitest-attachments
 coverage
 __screenshots__
+tsconfig.tsbuildinfo
