@@ -1,6 +1,10 @@
 dist
 node_modules
 
+packages/storage/prisma/dev.db
+packages/storage/prisma/dev.db-journal
+packages/storage/src/generated
+
 *storybook.log
 storybook-static
 .vitest-attachments

@@ -5,6 +5,7 @@
     { "path": "./packages/agent" },
     { "path": "./packages/domain" },
     { "path": "./packages/ui" },
-    { "path": "./packages/desktop" }
+    { "path": "./packages/desktop" },
+    { "path": "./packages/storage" }
   ]
 }

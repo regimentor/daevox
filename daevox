@@ -6,6 +6,19 @@ ROOT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 WEB_SEARCH_PID=
 DESKTOP_PID=
 DIEVOX_MODEL=unsloth/GLM-4.7-Flash-GGUF:UD-Q4_K_XL
+REFRESH_STORAGE=0
+
+for arg in "$@"; do
+    case "$arg" in
+        --refresh-storage)
+            REFRESH_STORAGE=1
+            ;;
+        *)
+            echo "daevox: unknown argument: $arg" >&2
+            exit 2
+            ;;
+    esac
+done
 
 cleanup() {
     status=$?
@@ -41,6 +54,20 @@ cd "$ROOT_DIR"
 
 echo "[daevox] Building packages..."
 npm run build
+
+STORAGE_DIR="$ROOT_DIR/packages/storage"
+STORAGE_DATABASE="$STORAGE_DIR/prisma/dev.db"
+
+if [ "$REFRESH_STORAGE" -eq 1 ]; then
+    echo "[daevox] Refreshing storage database..."
+    rm -f "$STORAGE_DATABASE"
+fi
+
+echo "[daevox] Applying storage migrations..."
+(
+    cd "$STORAGE_DIR"
+    npm run migrate
+)
 
 echo "[daevox] Starting web_search (logs below)..."
 (

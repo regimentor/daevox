@@ -1,0 +1,15 @@
+model DialogsMessages {
+  id        String   @id @default(uuid())
+  dialogId  String
+  actor     String
+  type      String
+  content   String
+  createdAt DateTime
+  tools     Json?
+  sources   Json?
+  metrics   Json?
+  dialog    Dialogs  @relation(fields: [dialogId], references: [id], onDelete: Cascade)
+
+  @@index([dialogId, createdAt])
+  @@map("dialogs_messages")
+}
