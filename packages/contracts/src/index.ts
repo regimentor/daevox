@@ -1,5 +1,5 @@
-export { MessageSchema } from "./message.js";
-export type { Message } from "./message.js";
+export { AgentToolCallSchema, MessageSchema } from "./message.js";
+export type { AgentToolCall, Message } from "./message.js";
 export {
   AgentStreamEventSchema,
   NextCompletionSchema,

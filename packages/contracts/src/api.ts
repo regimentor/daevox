@@ -1,6 +1,6 @@
 import { z } from "zod";
-import type { Message } from "./message.js";
-import { MessageSchema } from "./message.js";
+import type { AgentToolCall, Message } from "./message.js";
+import { AgentToolCallSchema, MessageSchema } from "./message.js";
 
 type NewMessageListener = (message: Message) => void;
 
@@ -15,6 +15,12 @@ const AgentStreamEventSchema = z.discriminatedUnion("type", [
     type: z.literal("response"),
     content: z.string(),
   }),
+  z
+    .object({
+      requestId: z.string(),
+      type: z.literal("tool"),
+    })
+    .extend(AgentToolCallSchema.shape),
 ]);
 
 type AgentStreamEvent = z.infer<typeof AgentStreamEventSchema>;

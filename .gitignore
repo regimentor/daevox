@@ -5,3 +5,4 @@ node_modules
 storybook-static
 .vitest-attachments
 coverage
+__screenshots__

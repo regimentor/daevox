@@ -51,6 +51,33 @@ describe("chat store", () => {
 
     await allSettled(receiveAgentStream, {
       scope,
+      params: {
+        requestId: "request-1",
+        type: "tool",
+        toolCallId: "tool-1",
+        name: "web_search",
+        input: '{"query":"Daevox"}',
+        status: "running",
+        durationMs: 0,
+        error: "",
+      },
+    });
+    await allSettled(receiveAgentStream, {
+      scope,
+      params: {
+        requestId: "request-1",
+        type: "tool",
+        toolCallId: "tool-1",
+        name: "web_search",
+        input: '{"query":"Daevox"}',
+        status: "complete",
+        durationMs: 12,
+        error: "",
+      },
+    });
+
+    await allSettled(receiveAgentStream, {
+      scope,
       params: { requestId: "request-1", type: "reasoning", content: "Think " },
     });
     await allSettled(receiveAgentStream, {
@@ -66,6 +93,16 @@ describe("chat store", () => {
       requestId: "request-1",
       reasoning: "Think first",
       response: "Hello",
+      tools: [
+        {
+          toolCallId: "tool-1",
+          name: "web_search",
+          input: '{"query":"Daevox"}',
+          status: "complete",
+          durationMs: 12,
+          error: "",
+        },
+      ],
       status: "streaming",
     });
 
@@ -75,6 +112,16 @@ describe("chat store", () => {
       requestId: "request-1",
       reasoning: "Think first",
       response: "",
+      tools: [
+        {
+          toolCallId: "tool-1",
+          name: "web_search",
+          input: '{"query":"Daevox"}',
+          status: "complete",
+          durationMs: 12,
+          error: "",
+        },
+      ],
       status: "complete",
     });
   });

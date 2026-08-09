@@ -14,6 +14,8 @@
     "build": "tsc --build"
   },
   "dependencies": {
-    "openai": "^7.4.0"
+    "@daevox/contracts": "^1.0.0",
+    "openai": "^7.4.0",
+    "zod": "^4.4.3"
   }
 }

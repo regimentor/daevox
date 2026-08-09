@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Thinking, type ThinkingProps } from "../thinking/index.js";
+import { ToolCalls } from "../tool-calls/index.js";
+import type { AgentToolCall } from "@daevox/contracts";
 import copyIcon from "./assets/copy.svg";
 import styles from "./message.module.css";
 
@@ -16,6 +18,8 @@ type MessageProps = {
   timestamp: string;
   children: ReactNode;
   thinking?: ThinkingProps;
+  tools?: AgentToolCall[];
+  toolsComplete?: boolean;
   onCopy?: () => void;
 };
 
@@ -26,6 +30,8 @@ const Message = ({
   timestamp,
   children,
   thinking,
+  tools,
+  toolsComplete = false,
   onCopy,
 }: MessageProps) => {
   const isRight = alignment === "right";
@@ -85,6 +91,9 @@ const Message = ({
       <div className={styles.content}>
         <p className={styles.author}>{author}</p>
         {hasThinking ? <Thinking {...(thinking ?? {})} /> : null}
+        {tools?.length ? (
+          <ToolCalls calls={tools} isComplete={toolsComplete} />
+        ) : null}
         <div className={styles.body}>{body}</div>
         <div className={styles.footer}>
           {!isRight ? copyControl : null}

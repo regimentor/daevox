@@ -28,7 +28,10 @@ const MessageHistory = ({
   useLayoutEffect(() => {
     const scrollPageToBottom = () => {
       const { body, documentElement } = document;
-      const pageHeight = Math.max(body.scrollHeight, documentElement.scrollHeight);
+      const pageHeight = Math.max(
+        body.scrollHeight,
+        documentElement.scrollHeight,
+      );
 
       window.scrollTo(0, pageHeight);
     };
@@ -56,6 +59,9 @@ const MessageHistory = ({
               alignment={message.actor === "user" ? "right" : "left"}
               author={message.actor === "user" ? "You" : "Daevox"}
               timestamp={formatTimestamp(message.createdAt)}
+              {...(message.tools?.length
+                ? { tools: message.tools, toolsComplete: true }
+                : {})}
               {...(message.actor === "agent" &&
               index === messages.length - 1 &&
               agentStream?.status === "complete"
@@ -64,6 +70,8 @@ const MessageHistory = ({
                       content: agentStream.reasoning,
                       isComplete: true,
                     },
+                    tools: agentStream.tools,
+                    toolsComplete: true,
                   }
                 : {})}
             >
@@ -80,6 +88,12 @@ const MessageHistory = ({
                 content: agentStream?.reasoning ?? "",
                 isComplete: agentStream?.status === "complete",
               }}
+              {...(agentStream?.tools.length
+                ? {
+                    tools: agentStream.tools,
+                    toolsComplete: agentStream.status === "complete",
+                  }
+                : {})}
             >
               {agentStream?.response ?? ""}
             </Message>

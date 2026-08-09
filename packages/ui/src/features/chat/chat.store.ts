@@ -1,4 +1,5 @@
 import {
+  type AgentToolCall,
   MessageSchema,
   type AgentStreamEvent,
   type Message,
@@ -14,6 +15,7 @@ type AgentStreamState = {
   requestId: string;
   reasoning: string;
   response: string;
+  tools: AgentToolCall[];
   status: "streaming" | "complete";
 };
 
@@ -31,8 +33,33 @@ const $agentStream = createStore<AgentStreamState | null>(null)
             requestId: event.requestId,
             reasoning: "",
             response: "",
+            tools: [],
             status: "streaming" as const,
           };
+
+    if (event.type === "tool") {
+      const tool = {
+        toolCallId: event.toolCallId,
+        name: event.name,
+        input: event.input,
+        status: event.status,
+        durationMs: event.durationMs,
+        error: event.error,
+      };
+      const toolIndex = nextState.tools.findIndex(
+        (existingTool) => existingTool.toolCallId === tool.toolCallId,
+      );
+
+      return {
+        ...nextState,
+        tools:
+          toolIndex === -1
+            ? [...nextState.tools, tool]
+            : nextState.tools.map((existingTool, index) =>
+                index === toolIndex ? tool : existingTool,
+              ),
+      };
+    }
 
     return {
       ...nextState,
@@ -64,6 +91,7 @@ export {
 };
 export type {
   AgentStreamState,
+  AgentToolCall,
   ChatMessage,
   ChatMessageActor,
   ChatMessageType,
