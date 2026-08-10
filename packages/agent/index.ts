@@ -19,8 +19,8 @@ export type {
   ToolEventListener,
   ToolResultListener,
 } from "./src/tools/logging.js";
-export { WebOpenPayloadSchema } from "./src/clients/contracts.js";
-export type { WebOpenPayload } from "./src/clients/contracts.js";
+export { WebOpenPayloadSchema } from "@daevox/external-clients";
+export type { WebOpenPayload } from "@daevox/external-clients";
 export { default as agentTestTaskPrompt } from "./prompts/agent-test-task.js";
 export { default as architectPrompt } from "./prompts/architect.js";
 export { default as plannerPrompt } from "./prompts/planner.js";

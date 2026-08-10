@@ -1,37 +1,32 @@
 import {
-  ExternalWebSearchClient,
-  ExternalWebSearchEndpoint,
-} from "../../clients/external_web_search_client.js";
-import {
-  ToolErrorSchema,
-  WebSearchPayloadSchema,
-} from "../../clients/contracts.js";
+  WebSearchClient,
+  WebSearchClientError,
+  WebSearchEndpoint,
+} from "@daevox/external-clients";
 import { WebSearchRequestSchema, type WebSearchRequest } from "./types.js";
 
-const client = new ExternalWebSearchClient();
+const client = new WebSearchClient();
 
 const webSearch = async (input: WebSearchRequest) => {
-  const response = await client.request(
-    ExternalWebSearchEndpoint.WebSearch,
-    WebSearchRequestSchema.parse(input),
-  );
-  const parsedPayload = WebSearchPayloadSchema.safeParse(response);
+  const request = WebSearchRequestSchema.parse(input);
 
-  if (parsedPayload.success) {
-    return parsedPayload.data;
+  try {
+    return await client.request(WebSearchEndpoint.WebSearch, request);
+  } catch (error) {
+    if (error instanceof WebSearchClientError) {
+      return { error: { message: error.message } };
+    }
+
+    if (error instanceof Error) {
+      return { error: { message: error.message } };
+    }
+
+    return {
+      error: {
+        message: "Web search service is unavailable",
+      },
+    };
   }
-
-  const parsedError = ToolErrorSchema.safeParse(response);
-
-  if (parsedError.success) {
-    return parsedError.data;
-  }
-
-  return {
-    error: {
-      message: "web_search returned an invalid payload",
-    },
-  };
 };
 
 export { webSearch };
