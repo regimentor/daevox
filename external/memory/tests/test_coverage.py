@@ -21,6 +21,7 @@ from memory_service.indexing.embeddings import (
 )
 from memory_service.indexing.watcher import VaultWatcher
 from memory_service.retrieval import hybrid
+from memory_service.retrieval.keyword import build_fts_query, keyword_search
 from memory_service.retrieval.rrf import reciprocal_rank_fusion
 from memory_service.retrieval.semantic import semantic_search
 
@@ -114,6 +115,27 @@ async def test_semantic_search_applies_path_and_tag_filters():
     assert [hit.chunk_id for hit in result] == [3]
     assert result[0].semantic_score == pytest.approx(1 / 1.3)
     assert connection.tag_checks == 2
+
+
+def test_fts_builder_quotes_user_syntax_and_escapes_path_prefix():
+    assert build_fts_query('title:foo "bar-baz"') == '"title:foo ""bar-baz"""'
+    with pytest.raises(ServiceError) as error:
+        build_fts_query("***")
+    assert error.value.status_code == 400
+
+    class Connection:
+        def __init__(self):
+            self.sql = ""
+            self.params = []
+
+        def execute(self, sql, params):
+            self.sql, self.params = sql, params
+            return _Rows([])
+
+    connection = Connection()
+    keyword_search(connection, "plain", 5, "folder_%", [])
+    assert "ESCAPE" in connection.sql
+    assert connection.params[1] == "folder\\_\\%/%"
 
 
 class _IndexForSearch:
@@ -262,6 +284,27 @@ def test_git_repository_edge_cases_and_models(test_settings):
     assert GitCheckpoint(created=False).commit is None
 
 
+def test_git_checkpoint_excludes_unrelated_staged_files(test_settings):
+    test_settings.vault_path.mkdir(parents=True, exist_ok=True)
+    repository = GitRepository(test_settings.vault_path, test_settings)
+    repository.init()
+    (test_settings.vault_path / "note.md").write_text("note\n", encoding="utf-8")
+    unrelated = test_settings.vault_path / "unrelated.txt"
+    unrelated.write_text("keep staged\n", encoding="utf-8")
+    import subprocess
+
+    subprocess.run(["git", "add", "unrelated.txt"], cwd=test_settings.vault_path, check=True)
+    commit = repository.checkpoint("markdown only")
+    assert commit["created"] is True
+    files = subprocess.check_output(
+        ["git", "show", "--format=", "--name-only", "HEAD"],
+        cwd=test_settings.vault_path,
+        text=True,
+    ).splitlines()
+    assert files == ["note.md"]
+    assert "A  unrelated.txt" in repository.status()["entries"]
+
+
 @pytest.mark.asyncio
 async def test_indexer_adopts_missing_ids_and_removes_deleted_notes(test_settings):
     resources = Resources(test_settings)
@@ -319,6 +362,27 @@ def test_embedding_initialization_failure_is_reported(tmp_path, monkeypatch):
         assert ready["ready"] is False
         assert ready["embeddings"] is False
         assert ready["embedding_error"] == "model unavailable"
+
+
+def test_sqlite_vec_failure_keeps_keyword_only_database(tmp_path, monkeypatch):
+    import sqlite_vec
+
+    def fail_load(connection):
+        raise RuntimeError("extension unavailable")
+
+    monkeypatch.setattr(sqlite_vec, "load", fail_load)
+    from memory_service.database.connection import Database
+
+    database = Database(tmp_path / "index.sqlite")
+    database.initialize(3)
+    assert database.vector_available is False
+    with database.connect() as connection:
+        assert (
+            connection.execute(
+                "SELECT 1 FROM sqlite_master WHERE name='chunk_vectors'"
+            ).fetchone()
+            is None
+        )
 
 
 def test_watcher_lifecycle_is_started_and_stopped(test_settings, monkeypatch):

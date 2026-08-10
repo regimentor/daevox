@@ -6,7 +6,9 @@ import logging
 from datetime import UTC, datetime
 from pathlib import Path
 
+from memory_service.coordination import OperationCoordinator
 from memory_service.database.connection import Database
+from memory_service.domain.errors import conflict
 from memory_service.domain.models import ParsedNote
 from memory_service.indexing.chunker import chunk_note
 from memory_service.indexing.embeddings import EmbeddingProvider
@@ -25,22 +27,38 @@ def _normalize_tag(tag: str) -> str:
 
 
 class Indexer:
-    def __init__(self, database: Database, paths: VaultPaths, provider: EmbeddingProvider, config):
+    def __init__(
+        self,
+        database: Database,
+        paths: VaultPaths,
+        provider: EmbeddingProvider,
+        config,
+        coordinator: OperationCoordinator | None = None,
+    ):
         self.database = database
         self.paths = paths
         self.provider = provider
         self.config = config
+        self.coordinator = coordinator or OperationCoordinator()
 
     async def index_path(self, path: Path, note_id: str | None = None) -> str:
+        async with self.coordinator.lock:
+            return await self._index_path(path, note_id)
+
+    async def _index_path(self, path: Path, note_id: str | None = None) -> str:
         relative = self.paths.display(path)
         raw = path.read_text(encoding="utf-8")
         parsed = parse_markdown(raw, relative)
         note_id = note_id or parsed.note_id
         if note_id is None:
             raise ValueError(f"note {relative} has no stable id")
-        return await self.index_parsed(note_id, relative, raw, parsed)
+        return await self._index_parsed(note_id, relative, raw, parsed)
 
     async def index_parsed(self, note_id: str, path: str, raw: str, parsed: ParsedNote) -> str:
+        async with self.coordinator.lock:
+            return await self._index_parsed(note_id, path, raw, parsed)
+
+    async def _index_parsed(self, note_id: str, path: str, raw: str, parsed: ParsedNote) -> str:
         chunks = chunk_note(
             parsed,
             self.config.chunk_target_tokens,
@@ -78,14 +96,19 @@ class Indexer:
         content_hash = _hash(raw)
         with self.database.transaction(), self.database.connect() as connection:
             existing = connection.execute(
-                "SELECT id FROM notes WHERE id = ?", (note_id,)
+                "SELECT id,path FROM notes WHERE id = ?", (note_id,)
             ).fetchone()
-            if existing is None:
-                path_collision = connection.execute(
-                    "SELECT id FROM notes WHERE path = ?", (path,)
-                ).fetchone()
-                if path_collision and path_collision["id"] != note_id:
-                    connection.execute("DELETE FROM notes WHERE id = ?", (path_collision["id"],))
+            if existing is not None and existing["path"] != path:
+                old_path = self.paths.absolute(existing["path"])
+                if old_path.exists():
+                    raise conflict(
+                        f"frontmatter.id {note_id} is already indexed at {existing['path']}"
+                    )
+            path_collision = connection.execute(
+                "SELECT id FROM notes WHERE path = ?", (path,)
+            ).fetchone()
+            if path_collision and path_collision["id"] != note_id:
+                raise conflict(f"note path is indexed by another note: {path}")
             connection.execute(
                 "INSERT INTO notes(id,path,title,content_hash,raw_content,created_at,"
                 "updated_at,indexed_at) "
@@ -169,8 +192,16 @@ class Indexer:
         )
         return note_id
 
-    def remove_note(self, note_id: str) -> None:
+    def remove_note(self, note_id: str, indexed_path: str | None = None) -> None:
         with self.database.transaction(), self.database.connect() as connection:
+            predicate = "id = ?"
+            params: tuple[object, ...] = (note_id,)
+            if indexed_path is not None:
+                predicate += " AND path = ?"
+                params += (indexed_path,)
+            row = connection.execute(f"SELECT id FROM notes WHERE {predicate}", params).fetchone()
+            if row is None:
+                return
             connection.execute("DELETE FROM chunk_fts WHERE note_id = ?", (note_id,))
             if self.database.vector_available:
                 connection.execute(
@@ -202,12 +233,14 @@ class Indexer:
                     )
             connection.commit()
 
-    async def reconcile(self) -> dict[str, int]:
+    async def reconcile(self) -> dict[str, object]:
+        async with self.coordinator.lock:
+            return await self._reconcile()
+
+    async def _reconcile(self) -> dict[str, object]:
         current = {self.paths.display(path): path for path in self.paths.scan()}
-        with self.database.connect() as connection:
-            indexed = connection.execute("SELECT id,path FROM notes").fetchall()
-        indexed_paths = {row["path"]: row["id"] for row in indexed}
-        changed = 0
+        parsed_by_path: dict[str, ParsedNote] = {}
+        paths_by_id: dict[str, list[str]] = {}
         for path_text, path in current.items():
             raw = path.read_text(encoding="utf-8")
             parsed = parse_markdown(raw, path_text)
@@ -215,9 +248,44 @@ class Indexer:
                 await self._adopt_missing_id(path, path_text, parsed)
                 raw = path.read_text(encoding="utf-8")
                 parsed = parse_markdown(raw, path_text)
+            parsed_by_path[path_text] = parsed
+            if parsed.note_id is not None:
+                paths_by_id.setdefault(parsed.note_id, []).append(path_text)
+
+        with self.database.connect() as connection:
+            indexed = connection.execute("SELECT id,path FROM notes").fetchall()
+        indexed_paths = {row["path"]: row["id"] for row in indexed}
+        duplicates = []
+        duplicate_ids: set[str] = set()
+        for candidate_id, paths in sorted(paths_by_id.items()):
+            if len(paths) > 1:
+                duplicate_ids.add(candidate_id)
+                duplicates.append(
+                    {
+                        "id": candidate_id,
+                        "paths": sorted(paths),
+                        "indexed_path": next(
+                            (row["path"] for row in indexed if row["id"] == candidate_id), None
+                        ),
+                    }
+                )
+        changed = 0
+        for path_text, path in current.items():
+            parsed = parsed_by_path[path_text]
             stable_id = parsed.note_id
             if stable_id is None:
                 continue
+            if stable_id in duplicate_ids:
+                indexed_path = next(
+                    (row["path"] for row in indexed if row["id"] == stable_id), None
+                )
+                # Keep the existing source path authoritative. If it disappeared,
+                # choose a deterministic path and report the conflict.
+                if indexed_path and indexed_path != path_text and indexed_path in current:
+                    continue
+                if path_text != sorted(paths_by_id[stable_id])[0]:
+                    continue
+            raw = path.read_text(encoding="utf-8")
             with self.database.connect() as connection:
                 old = connection.execute(
                     "SELECT content_hash FROM notes WHERE id=?", (stable_id,)
@@ -228,14 +296,18 @@ class Indexer:
                 or indexed_paths.get(path_text) != stable_id
                 or self._vectors_missing(stable_id)
             ):
-                await self.index_path(path, stable_id)
+                await self._index_path(path, stable_id)
                 changed += 1
         deleted = 0
         for path_text, note_id in indexed_paths.items():
-            if path_text not in current:
-                self.remove_note(note_id)
+            if path_text not in current and note_id not in paths_by_id:
+                self.remove_note(note_id, path_text)
                 deleted += 1
-        return {"indexed": changed, "deleted": deleted}
+        result: dict[str, object] = {"indexed": changed, "deleted": deleted}
+        if duplicates:
+            result["duplicates"] = duplicates
+        self.resolve_links()
+        return result
 
     def _vectors_missing(self, note_id: str) -> bool:
         if not self.database.vector_available:
@@ -251,15 +323,16 @@ class Indexer:
             ).fetchone()[0]
         return chunk_count != vector_count
 
-    async def rebuild(self) -> dict[str, int]:
-        with self.database.transaction(), self.database.connect() as connection:
-            connection.execute("DELETE FROM chunk_fts")
-            if self.database.vector_available:
-                connection.execute("DELETE FROM chunk_vectors")
-            connection.execute("DELETE FROM notes")
-            connection.execute("DELETE FROM tags")
-            connection.commit()
-        return await self.reconcile()
+    async def rebuild(self) -> dict[str, object]:
+        async with self.coordinator.lock:
+            with self.database.transaction(), self.database.connect() as connection:
+                connection.execute("DELETE FROM chunk_fts")
+                if self.database.vector_available:
+                    connection.execute("DELETE FROM chunk_vectors")
+                connection.execute("DELETE FROM notes")
+                connection.execute("DELETE FROM tags")
+                connection.commit()
+            return await self._reconcile()
 
     async def _adopt_missing_id(self, path: Path, path_text: str, parsed: ParsedNote) -> None:
         from memory_service.services import new_uuid7

@@ -13,6 +13,9 @@ class Database:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self._lock = threading.RLock()
         self._vector_loaded = False
+        self._vector_schema_ready = False
+        self._vector_load_attempted = False
+        self._vector_error: str | None = None
 
     def connect(self) -> sqlite3.Connection:
         connection = sqlite3.connect(self.path, timeout=30)
@@ -25,9 +28,12 @@ class Database:
             connection.enable_load_extension(True)
             sqlite_vec.load(connection)
             self._vector_loaded = True
-        except (ImportError, AttributeError, OSError, sqlite3.Error):
+            self._vector_error = None
+        except Exception as exc:
             self._vector_loaded = False
+            self._vector_error = str(exc)
         finally:
+            self._vector_load_attempted = True
             try:
                 connection.enable_load_extension(False)
             except (AttributeError, sqlite3.Error):
@@ -37,13 +43,18 @@ class Database:
     def initialize(self, dimension: int | None = None) -> None:
         with self._lock, self.connect() as connection:
             connection.executescript(SCHEMA)
-            if dimension:
+            if dimension and self._vector_loaded:
                 existing = connection.execute(
                     "SELECT value FROM index_meta WHERE key='embedding_dimension'"
                 ).fetchone()
                 if existing and existing[0] != str(dimension):
                     connection.execute("DROP TABLE IF EXISTS chunk_vectors")
-                connection.execute(vector_schema(dimension))
+                try:
+                    connection.execute(vector_schema(dimension))
+                    self._vector_schema_ready = True
+                except sqlite3.Error as exc:
+                    self._vector_schema_ready = False
+                    self._vector_error = str(exc)
                 connection.execute(
                     "INSERT INTO index_meta(key, value) VALUES('embedding_dimension', ?) "
                     "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
@@ -53,7 +64,7 @@ class Database:
 
     @property
     def vector_available(self) -> bool:
-        return self._vector_loaded
+        return self._vector_loaded and self._vector_schema_ready
 
     def transaction(self):
         return self._lock

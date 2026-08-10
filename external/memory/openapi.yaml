@@ -1,0 +1,1329 @@
+# Generated from memory_service.app.create_app().openapi().
+# Keep this contract in sync with the runtime schema exposed at /openapi.json.
+openapi: 3.1.0
+info:
+  title: Local Obsidian Memory Service
+  summary: Local Obsidian-compatible Markdown memory backend for AI agents.
+  description: The configured Markdown Vault is the source of truth. SQLite stores
+    disposable search indexes, while optional Git endpoints provide explicit Vault
+    versioning.
+  version: 0.1.0
+paths:
+  /health:
+    get:
+      tags:
+      - health
+      summary: Liveness check
+      description: Returns successfully when the HTTP service process is running.
+      operationId: health_health_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+  /ready:
+    get:
+      tags:
+      - health
+      summary: Readiness check
+      description: Reports whether the Vault, SQLite index and embedding provider
+        are ready.
+      operationId: ready_ready_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadyResponse'
+  /v1/notes:
+    post:
+      tags:
+      - notes
+      summary: Create a note
+      description: Creates a Markdown note in the configured Obsidian-compatible Vault.
+      operationId: create_note_v1_notes_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NoteCreate'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NoteMutationResponse'
+        '400':
+          description: Invalid request or Git revision.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested note, revision or file was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Operation conflicts with the current Vault or Git state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Request validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected database or service error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: A required service dependency is unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /v1/notes/{note_id}/history:
+    get:
+      tags:
+      - notes
+      summary: List note history
+      operationId: note_history_v1_notes__note_id__history_get
+      parameters:
+      - name: note_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Note Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NoteHistoryResponse'
+        '400':
+          description: Invalid request or Git revision.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested note, revision or file was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Operation conflicts with the current Vault or Git state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Request validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected database or service error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: A required service dependency is unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /v1/notes/{note_id}/revisions/{revision}:
+    get:
+      tags:
+      - notes
+      summary: Read a historical note revision
+      description: Reads the note as it existed at a Git revision, including before
+        a rename.
+      operationId: revision_v1_notes__note_id__revisions__revision__get
+      parameters:
+      - name: note_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Note Id
+      - name: revision
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Revision
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RevisionResponse'
+        '400':
+          description: Invalid request or Git revision.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested note, revision or file was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Operation conflicts with the current Vault or Git state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Request validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected database or service error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: A required service dependency is unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /v1/notes/{note_id}/restore:
+    post:
+      tags:
+      - notes
+      summary: Restore a note revision
+      description: Writes a historical revision into the working tree without rewriting
+        Git history.
+      operationId: restore_v1_notes__note_id__restore_post
+      parameters:
+      - name: note_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Note Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RestoreRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RestoreResponse'
+        '400':
+          description: Invalid request or Git revision.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested note, revision or file was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Operation conflicts with the current Vault or Git state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Request validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected database or service error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: A required service dependency is unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /v1/notes/{note_id}:
+    get:
+      tags:
+      - notes
+      summary: Get a note
+      operationId: get_note_v1_notes__note_id__get
+      parameters:
+      - name: note_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Note Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NoteResponse'
+        '400':
+          description: Invalid request or Git revision.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested note, revision or file was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Operation conflicts with the current Vault or Git state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Request validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected database or service error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: A required service dependency is unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      tags:
+      - notes
+      summary: Update a note
+      description: Updates note content and/or metadata; optionally moves its Markdown
+        path.
+      operationId: update_note_v1_notes__note_id__put
+      parameters:
+      - name: note_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Note Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NoteUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NoteMutationResponse'
+        '400':
+          description: Invalid request or Git revision.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested note, revision or file was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Operation conflicts with the current Vault or Git state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Request validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected database or service error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: A required service dependency is unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+      - notes
+      summary: Delete a note
+      operationId: delete_note_v1_notes__note_id__delete
+      parameters:
+      - name: note_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Note Id
+      responses:
+        '204':
+          description: Note deleted.
+        '400':
+          description: Invalid request or Git revision.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested note, revision or file was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Operation conflicts with the current Vault or Git state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Request validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected database or service error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: A required service dependency is unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /v1/search:
+    post:
+      tags:
+      - search
+      summary: Search notes
+      description: Searches indexed Markdown chunks using keyword, semantic or hybrid
+        retrieval. Semantic-only search returns 503 when embeddings are unavailable.
+      operationId: search_notes_v1_search_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SearchRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResponse'
+        '400':
+          description: Invalid request or Git revision.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested note, revision or file was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Operation conflicts with the current Vault or Git state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Request validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected database or service error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: A required service dependency is unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /v1/git/init:
+    post:
+      tags:
+      - git
+      summary: Initialize Git for the Vault
+      description: Initializes a Git repository in the configured Vault if one does
+        not exist.
+      operationId: init_git_v1_git_init_post
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GitInitResponse'
+        '400':
+          description: Invalid request or Git revision.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested note, revision or file was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Operation conflicts with the current Vault or Git state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Request validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected database or service error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: A required service dependency is unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /v1/git/status:
+    get:
+      tags:
+      - git
+      summary: Get Vault Git status
+      operationId: git_status_v1_git_status_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GitStatusResponse'
+        '400':
+          description: Invalid request or Git revision.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested note, revision or file was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Operation conflicts with the current Vault or Git state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Request validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected database or service error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: A required service dependency is unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /v1/git/diff:
+    get:
+      tags:
+      - git
+      summary: Get the Markdown diff
+      description: Returns the working-tree diff for Markdown files in the Vault.
+      operationId: git_diff_v1_git_diff_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GitDiffResponse'
+        '400':
+          description: Invalid request or Git revision.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested note, revision or file was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Operation conflicts with the current Vault or Git state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Request validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected database or service error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: A required service dependency is unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /v1/git/checkpoint:
+    post:
+      tags:
+      - git
+      summary: Create a Git checkpoint
+      description: Commits changed Markdown files in the Vault with the supplied message.
+      operationId: checkpoint_v1_git_checkpoint_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckpointRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GitCheckpointResponse'
+        '400':
+          description: Invalid request or Git revision.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested note, revision or file was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Operation conflicts with the current Vault or Git state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Request validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected database or service error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: A required service dependency is unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /v1/git/history:
+    get:
+      tags:
+      - git
+      summary: List Git history
+      operationId: history_v1_git_history_get
+      parameters:
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 50
+          title: Limit
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GitHistoryResponse'
+        '400':
+          description: Invalid request or Git revision.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested note, revision or file was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Operation conflicts with the current Vault or Git state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Request validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected database or service error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: A required service dependency is unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /v1/admin/reindex:
+    post:
+      tags:
+      - admin
+      summary: Rebuild the derived index
+      description: Reconciles all Markdown files in the Vault and rebuilds SQLite
+        metadata, FTS and available vectors. Markdown remains the source of truth.
+      operationId: reindex_v1_admin_reindex_post
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReindexResponse'
+        '400':
+          description: Invalid request or Git revision.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Requested note, revision or file was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Operation conflicts with the current Vault or Git state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Request validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected database or service error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: A required service dependency is unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  schemas:
+    CheckpointRequest:
+      properties:
+        message:
+          type: string
+          maxLength: 500
+          minLength: 1
+          title: Message
+          description: Git commit message.
+      type: object
+      required:
+      - message
+      title: CheckpointRequest
+    ErrorDetail:
+      properties:
+        code:
+          type: string
+          title: Code
+          description: Stable machine-readable error code.
+        message:
+          type: string
+          title: Message
+          description: Human-readable error message.
+      type: object
+      required:
+      - code
+      - message
+      title: ErrorDetail
+    ErrorResponse:
+      properties:
+        error:
+          $ref: '#/components/schemas/ErrorDetail'
+      type: object
+      required:
+      - error
+      title: ErrorResponse
+    GitCheckpointResponse:
+      properties:
+        created:
+          type: boolean
+          title: Created
+        commit:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Commit
+        message:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Message
+      type: object
+      required:
+      - created
+      title: GitCheckpointResponse
+    GitCommit:
+      properties:
+        commit:
+          type: string
+          title: Commit
+        timestamp:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Timestamp
+        author:
+          type: string
+          title: Author
+        message:
+          type: string
+          title: Message
+      type: object
+      required:
+      - commit
+      - author
+      - message
+      title: GitCommit
+    GitDiffResponse:
+      properties:
+        diff:
+          type: string
+          title: Diff
+      type: object
+      required:
+      - diff
+      title: GitDiffResponse
+    GitHistoryResponse:
+      properties:
+        history:
+          items:
+            $ref: '#/components/schemas/GitCommit'
+          type: array
+          title: History
+      type: object
+      required:
+      - history
+      title: GitHistoryResponse
+    GitInitResponse:
+      properties:
+        initialized:
+          type: boolean
+          title: Initialized
+        path:
+          type: string
+          title: Path
+      type: object
+      required:
+      - initialized
+      - path
+      title: GitInitResponse
+    GitStatusResponse:
+      properties:
+        initialized:
+          type: boolean
+          title: Initialized
+        entries:
+          items:
+            type: string
+          type: array
+          title: Entries
+      type: object
+      required:
+      - initialized
+      - entries
+      title: GitStatusResponse
+    HealthResponse:
+      properties:
+        status:
+          type: string
+          const: ok
+          title: Status
+      type: object
+      required:
+      - status
+      title: HealthResponse
+    NoteCreate:
+      properties:
+        path:
+          type: string
+          title: Path
+          description: Vault-relative path ending in `.md`.
+        title:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Title
+          description: Optional Obsidian note title.
+        content:
+          type: string
+          title: Content
+          description: Markdown body without YAML frontmatter.
+          default: ''
+        frontmatter:
+          additionalProperties: true
+          type: object
+          title: Frontmatter
+          description: Additional YAML frontmatter. `id`, `created` and `updated`
+            are managed by the service.
+      type: object
+      required:
+      - path
+      title: NoteCreate
+    NoteHistoryResponse:
+      properties:
+        note_id:
+          type: string
+          title: Note Id
+        history:
+          items:
+            $ref: '#/components/schemas/GitCommit'
+          type: array
+          title: History
+      type: object
+      required:
+      - note_id
+      - history
+      title: NoteHistoryResponse
+    NoteMutationResponse:
+      properties:
+        id:
+          type: string
+          title: Id
+        path:
+          type: string
+          title: Path
+      type: object
+      required:
+      - id
+      - path
+      title: NoteMutationResponse
+    NoteResponse:
+      properties:
+        id:
+          type: string
+          title: Id
+        path:
+          type: string
+          title: Path
+        title:
+          type: string
+          title: Title
+        content:
+          type: string
+          title: Content
+        raw:
+          type: string
+          title: Raw
+        frontmatter:
+          additionalProperties: true
+          type: object
+          title: Frontmatter
+        created:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Created
+        updated:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Updated
+      type: object
+      required:
+      - id
+      - path
+      - title
+      - content
+      - raw
+      - frontmatter
+      title: NoteResponse
+    NoteUpdate:
+      properties:
+        path:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Path
+          description: New vault-relative `.md` path.
+        title:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Title
+          description: Replacement Obsidian note title.
+        content:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Content
+          description: Replacement Markdown body.
+        frontmatter:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+          title: Frontmatter
+          description: Frontmatter fields to merge into the existing note.
+      additionalProperties: false
+      type: object
+      title: NoteUpdate
+    ReadyResponse:
+      properties:
+        ready:
+          type: boolean
+          title: Ready
+        vault:
+          type: boolean
+          title: Vault
+        sqlite:
+          type: boolean
+          title: Sqlite
+        embeddings:
+          type: boolean
+          title: Embeddings
+        embedding_error:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Embedding Error
+        git_initialized:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Git Initialized
+      type: object
+      required:
+      - ready
+      - vault
+      - sqlite
+      - embeddings
+      title: ReadyResponse
+    ReconciliationDuplicate:
+      properties:
+        id:
+          type: string
+          title: Id
+        paths:
+          items:
+            type: string
+          type: array
+          title: Paths
+        indexed_path:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Indexed Path
+      type: object
+      required:
+      - id
+      - paths
+      title: ReconciliationDuplicate
+    ReindexResponse:
+      properties:
+        reindexed:
+          type: boolean
+          title: Reindexed
+        indexed:
+          type: integer
+          title: Indexed
+        deleted:
+          type: integer
+          title: Deleted
+        duplicates:
+          items:
+            $ref: '#/components/schemas/ReconciliationDuplicate'
+          type: array
+          title: Duplicates
+      type: object
+      required:
+      - reindexed
+      - indexed
+      - deleted
+      title: ReindexResponse
+    RestoreRequest:
+      properties:
+        revision:
+          type: string
+          maxLength: 200
+          minLength: 1
+          title: Revision
+          description: Git revision to restore.
+      type: object
+      required:
+      - revision
+      title: RestoreRequest
+    RestoreResponse:
+      properties:
+        id:
+          type: string
+          title: Id
+        path:
+          type: string
+          title: Path
+        revision:
+          type: string
+          title: Revision
+      type: object
+      required:
+      - id
+      - path
+      - revision
+      title: RestoreResponse
+    RevisionResponse:
+      properties:
+        note_id:
+          type: string
+          title: Note Id
+        revision:
+          type: string
+          title: Revision
+        path:
+          type: string
+          title: Path
+        raw:
+          type: string
+          title: Raw
+      type: object
+      required:
+      - note_id
+      - revision
+      - path
+      - raw
+      title: RevisionResponse
+    SearchRequest:
+      properties:
+        query:
+          type: string
+          minLength: 1
+          title: Query
+          description: Free-text query.
+        mode:
+          type: string
+          enum:
+          - keyword
+          - semantic
+          - hybrid
+          title: Mode
+          description: Retrieval strategy.
+          default: hybrid
+        limit:
+          anyOf:
+          - type: integer
+            maximum: 100.0
+            minimum: 1.0
+          - type: 'null'
+          title: Limit
+          description: Maximum number of chunks to return.
+        path_prefix:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Path Prefix
+          description: Literal vault-relative path prefix filter.
+        tags:
+          items:
+            type: string
+          type: array
+          title: Tags
+          description: Tags that matching notes must contain.
+        expand_links:
+          type: boolean
+          title: Expand Links
+          description: Include one-hop chunks from notes linked by matching notes.
+          default: false
+      type: object
+      required:
+      - query
+      title: SearchRequest
+    SearchResponse:
+      properties:
+        query:
+          type: string
+          title: Query
+        mode:
+          type: string
+          title: Mode
+        results:
+          items:
+            $ref: '#/components/schemas/SearchResult'
+          type: array
+          title: Results
+      type: object
+      required:
+      - query
+      - mode
+      - results
+      title: SearchResponse
+    SearchResult:
+      properties:
+        note_id:
+          type: string
+          title: Note Id
+        path:
+          type: string
+          title: Path
+        title:
+          type: string
+          title: Title
+        heading_path:
+          items:
+            type: string
+          type: array
+          title: Heading Path
+        content:
+          type: string
+          title: Content
+        score:
+          type: number
+          title: Score
+        keyword_score:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Keyword Score
+        semantic_score:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Semantic Score
+        chunk_id:
+          type: string
+          title: Chunk Id
+      type: object
+      required:
+      - note_id
+      - path
+      - title
+      - heading_path
+      - content
+      - score
+      - chunk_id
+      title: SearchResult
+tags:
+- name: health
+  description: Liveness and readiness probes.
+- name: notes
+  description: Markdown note CRUD and Git revision operations.
+- name: search
+  description: Keyword, semantic and hybrid retrieval.
+- name: admin
+  description: Maintenance operations for derived indexes.
+- name: git
+  description: Explicit Git operations for the Markdown Vault.
+

@@ -1,18 +1,41 @@
 from __future__ import annotations
 
 import json
+import re
+import sqlite3
 
+from memory_service.domain.errors import bad_request
 from memory_service.domain.models import SearchHit
+
+
+def build_fts_query(query: str) -> str:
+    """Build a phrase query where all user input is treated as data."""
+    if not query or "\x00" in query or not query.strip():
+        raise bad_request("search query must contain searchable text")
+    normalized = re.sub(r"\s+", " ", query.strip())
+    if not re.search(r"\w", normalized, flags=re.UNICODE):
+        raise bad_request("search query must contain searchable text")
+    return '"' + normalized.replace('"', '""') + '"'
+
+
+def _like_prefix(path_prefix: str) -> str:
+    escaped = (
+        path_prefix.rstrip("/")
+        .replace("\\", "\\\\")
+        .replace("%", "\\%")
+        .replace("_", "\\_")
+    )
+    return escaped + "/%"
 
 
 def keyword_search(
     connection, query: str, limit: int, path_prefix: str | None, tags: list[str]
 ) -> list[SearchHit]:
     clauses = ["chunk_fts MATCH ?"]
-    params: list[object] = [query]
+    params: list[object] = [build_fts_query(query)]
     if path_prefix:
-        clauses.append("chunk_fts.path LIKE ?")
-        params.append(path_prefix.rstrip("/") + "/%")
+        clauses.append("chunk_fts.path LIKE ? ESCAPE '\\'")
+        params.append(_like_prefix(path_prefix))
     if tags:
         placeholders = ",".join("?" for _ in tags)
         clauses.append(
@@ -25,7 +48,10 @@ def keyword_search(
         "FROM chunk_fts WHERE " + " AND ".join(clauses) + " ORDER BY rank LIMIT ?"
     )
     params.append(limit)
-    rows = connection.execute(sql, params).fetchall()
+    try:
+        rows = connection.execute(sql, params).fetchall()
+    except sqlite3.OperationalError as exc:
+        raise bad_request("invalid full-text search query") from exc
     return [
         SearchHit(
             chunk_id=int(row["chunk_id"]),

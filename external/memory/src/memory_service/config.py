@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     vault_path: Path = Path("./vault")
     data_path: Path = Path("./data")
     db_path: Path = Path("./data/index.sqlite")
+    openapi_path: Path = Path(__file__).resolve().parents[2] / "openapi.yaml"
     embedding_model: str = "BAAI/bge-m3"
     embedding_device: str = "auto"
     embedding_provider: str = "sentence-transformers"
@@ -45,7 +46,7 @@ class Settings(BaseSettings):
     def resolve_paths(self, base_dir: Path | None = None) -> "Settings":
         base = (base_dir or Path.cwd()).resolve()
         values = self.model_dump()
-        for key in ("vault_path", "data_path", "db_path"):
+        for key in ("vault_path", "data_path", "db_path", "openapi_path"):
             path = Path(values[key])
             values[key] = path if path.is_absolute() else (base / path).resolve()
         return type(self).model_validate(values)

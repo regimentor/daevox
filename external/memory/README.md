@@ -20,11 +20,12 @@ uv run memory-service serve
 uv run uvicorn memory_service.main:app --host 127.0.0.1 --port 8765
 ```
 
-Документация API доступна на `/docs`, схема — `/openapi.json`.
+Документация API доступна на `/docs`, runtime-схема — `/openapi.json`, а экспортированный
+контракт хранится в [`openapi.yaml`](./openapi.yaml) и автоматически обновляется при старте.
 
 ## Configuration
 
-Основные переменные: `MEMORY_VAULT_PATH`, `MEMORY_DATA_PATH`, `MEMORY_DB_PATH`, `MEMORY_EMBEDDING_MODEL`, `MEMORY_EMBEDDING_DEVICE`, `MEMORY_WATCH_ENABLED`, `MEMORY_GIT_ENABLED`, `MEMORY_GIT_AUTO_COMMIT`, `MEMORY_SEARCH_DEFAULT_LIMIT` и настройки chunker `MEMORY_CHUNK_*`. Полный список находится в `.env.example`.
+Основные переменные: `MEMORY_VAULT_PATH`, `MEMORY_DATA_PATH`, `MEMORY_DB_PATH`, `MEMORY_OPENAPI_PATH`, `MEMORY_EMBEDDING_MODEL`, `MEMORY_EMBEDDING_DEVICE`, `MEMORY_WATCH_ENABLED`, `MEMORY_GIT_ENABLED`, `MEMORY_GIT_AUTO_COMMIT`, `MEMORY_SEARCH_DEFAULT_LIMIT` и настройки chunker `MEMORY_CHUNK_*`. Полный список находится в `.env.example`.
 
 ## Basic API usage
 
@@ -51,6 +52,10 @@ curl -X POST http://127.0.0.1:8765/v1/notes/<NOTE_ID>/restore \
 ## Obsidian and index recovery
 
 Откройте значение `MEMORY_VAULT_PATH` напрямую в Obsidian. Ручные изменения обнаруживаются watcher-ом.
+Markdown является source of truth: при ручном переименовании файла с сохранённым
+`frontmatter.id` индекс обновляет путь. Если один ID найден в нескольких файлах, файлы
+не изменяются и не удаляются, а reconciliation возвращает список конфликтов; API записи
+с уже занятым ID или путём отвечает `409`.
 
 SQLite index disposable. Если `data/index.sqlite` удалён, восстановите его из Vault:
 
@@ -58,9 +63,18 @@ SQLite index disposable. Если `data/index.sqlite` удалён, восста
 uv run memory-service reindex
 ```
 
+Полный rebuild сериализован с CRUD и watcher. Он пересоздаёт только производные данные;
+ошибка индексации не изменяет уже существующий Markdown. FTS5 keyword search доступен
+самостоятельно. Если sqlite-vec или embedding provider недоступен, hybrid продолжает
+keyword-поиск, а запросы `mode=semantic` отвечают `503`.
+
 ## Git
 
-Git не инициализируется автоматически. Сначала вызовите `/v1/git/init`, затем `/v1/git/checkpoint`. Restore читает исторический файл и создаёт новую текущую working-tree modification; история не переписывается.
+Git не инициализируется автоматически. Сначала вызовите `/v1/git/init`, затем `/v1/git/checkpoint`.
+Checkpoint включает только Markdown Vault и не забирает чужие staged-файлы. Restore ищет
+исторический путь по ID заметки, поэтому работает и после rename; он создаёт новую текущую
+working-tree modification, история не переписывается. Отсутствующая revision или файл
+возвращает структурированную ошибку `404`, конфликт Git — `409`.
 
 ## Checks
 

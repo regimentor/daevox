@@ -11,21 +11,37 @@ def estimate_tokens(text: str) -> int:
 
 
 def _split_unit(text: str, maximum: int) -> list[str]:
-    words = text.split()
-    if not words:
+    if maximum < 1:
+        raise ValueError("maximum must be positive")
+    if not text.strip():
         return []
+
+    # Code is kept line-oriented. A source line can itself be larger than the
+    # configured limit, but it is never cut in the middle of a line.
+    if "```" in text or "~~~" in text:
+        units: list[str] = []
+        code_lines: list[str] = []
+        for line in text.splitlines():
+            candidate = "\n".join([*code_lines, line])
+            if code_lines and estimate_tokens(candidate) > maximum:
+                units.append("\n".join(code_lines))
+                code_lines = []
+            code_lines.append(line)
+        if code_lines:
+            units.append("\n".join(code_lines))
+        return units
+
+    words = text.split()
     result: list[str] = []
-    current: list[str] = []
-    count = 0
+    words_current: list[str] = []
     for word in words:
-        size = estimate_tokens(word)
-        if current and count + size > maximum:
-            result.append(" ".join(current))
-            current, count = [], 0
-        current.append(word)
-        count += size
-    if current:
-        result.append(" ".join(current))
+        candidate = " ".join([*words_current, word])
+        if words_current and estimate_tokens(candidate) > maximum:
+            result.append(" ".join(words_current))
+            words_current = []
+        words_current.append(word)
+    if words_current:
+        result.append(" ".join(words_current))
     return result
 
 
@@ -69,17 +85,21 @@ def chunk_note(
     pending_text = ""
     pending_headings: list[str] = []
     for headings, text in sections:
-        contextual = f"{' > '.join(headings)}\n\n{text}" if headings else text
-        if pending_text and estimate_tokens(pending_text + "\n\n" + contextual) <= maximum:
-            pending_text += "\n\n" + contextual
-        else:
-            if pending_text:
+        heading_context = f"{' > '.join(headings)}\n\n" if headings else ""
+        available = max(1, maximum - estimate_tokens(heading_context))
+        for piece in _split_unit(text, available):
+            contextual = heading_context + piece
+            if pending_text and estimate_tokens(pending_text + "\n\n" + contextual) <= maximum:
+                pending_text += "\n\n" + contextual
+            else:
+                if pending_text:
+                    chunks.append(_make_chunk(len(chunks), pending_headings, pending_text))
+                pending_text, pending_headings = contextual, headings
+            if estimate_tokens(pending_text) >= target:
                 chunks.append(_make_chunk(len(chunks), pending_headings, pending_text))
-            pending_text, pending_headings = contextual, headings
-        if estimate_tokens(pending_text) >= target:
-            chunks.append(_make_chunk(len(chunks), pending_headings, pending_text))
-            tail = " ".join(pending_text.split()[-overlap:]) if overlap else ""
-            pending_text = tail
+                tail = " ".join(pending_text.split()[-overlap:]) if overlap else ""
+                pending_text = tail
+                pending_headings = headings
     if pending_text.strip():
         chunks.append(_make_chunk(len(chunks), pending_headings, pending_text))
     return chunks

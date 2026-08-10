@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import json
 import uuid
 from datetime import UTC, datetime
@@ -35,7 +34,8 @@ class MemoryService:
         self.settings = settings
         self.storage = storage
         self.indexer = indexer
-        self._mutation_lock = asyncio.Lock()
+        # CRUD, watcher reconciliation and rebuild must share one lock.
+        self._mutation_lock = indexer.coordinator.lock
 
     def _prepare(
         self, note_id: str, request: NoteCreate | NoteUpdate, current=None
@@ -71,10 +71,22 @@ class MemoryService:
                 if connection.execute("SELECT 1 FROM notes WHERE path=?", (path,)).fetchone():
                     raise conflict(f"note path already exists: {path}")
             note_id = str(request.frontmatter.get("id") or new_uuid7())
+            with self.indexer.database.connect() as connection:
+                if connection.execute("SELECT 1 FROM notes WHERE id=?", (note_id,)).fetchone():
+                    raise conflict(f"note id already exists: {note_id}")
+            for candidate in self.storage.paths.scan():
+                candidate_path = self.storage.paths.display(candidate)
+                if candidate_path == path:
+                    continue
+                candidate_parsed = parse_markdown(
+                    candidate.read_text(encoding="utf-8"), candidate_path
+                )
+                if candidate_parsed.note_id == note_id:
+                    raise conflict(f"note id already exists in Markdown: {note_id}")
             _, frontmatter = self._prepare(note_id, request)
             content = str(frontmatter.pop("__content"))
             self.storage.write_path(path, render_markdown(content, frontmatter))
-            await self.indexer.index_path(self.storage.paths.absolute(path), note_id)
+            await self.indexer._index_path(self.storage.paths.absolute(path), note_id)
             return {"id": note_id, "path": path}
 
     def get_by_id(self, note_id: str):
@@ -95,6 +107,8 @@ class MemoryService:
                 else self.storage.paths.display(self.storage.paths.absolute(request.path))
             )
             if new_path != old_path:
+                if self.storage.paths.absolute(new_path).exists():
+                    raise conflict(f"note path already exists: {new_path}")
                 with self.indexer.database.connect() as connection:
                     if connection.execute(
                         "SELECT 1 FROM notes WHERE path=?", (new_path,)
@@ -106,37 +120,41 @@ class MemoryService:
             self.storage.write_path(new_path, render_markdown(content, frontmatter))
             if new_path != old_path:
                 self.storage.delete_path(old_path)
-            await self.indexer.index_path(self.storage.paths.absolute(new_path), note_id)
+            await self.indexer._index_path(self.storage.paths.absolute(new_path), note_id)
             return {"id": note_id, "path": new_path}
 
     async def delete(self, note_id: str) -> None:
         async with self._mutation_lock:
             row, _, _ = self.get_by_id(note_id)
             self.storage.delete_path(row["path"])
-            self.indexer.remove_note(note_id)
+            self.indexer.remove_note(note_id, row["path"])
 
     async def reconcile_path(self, path: Path) -> None:
-        if not path.exists():
-            return
-        relative = self.storage.paths.display(path)
-        raw = path.read_text(encoding="utf-8")
-        parsed = parse_markdown(raw, relative)
-        note_id = parsed.note_id
-        if note_id is None:
-            note_id = new_uuid7()
-            frontmatter = dict(parsed.frontmatter)
-            frontmatter["id"] = note_id
-            frontmatter.setdefault("created", utc_now())
-            frontmatter["updated"] = utc_now()
-            self.storage.write_path(relative, render_markdown(parsed.body, frontmatter))
-        await self.indexer.index_path(path, note_id)
+        async with self._mutation_lock:
+            if not path.exists():
+                return
+            relative = self.storage.paths.display(path)
+            raw = path.read_text(encoding="utf-8")
+            parsed = parse_markdown(raw, relative)
+            note_id = parsed.note_id
+            if note_id is None:
+                note_id = new_uuid7()
+                frontmatter = dict(parsed.frontmatter)
+                frontmatter["id"] = note_id
+                frontmatter.setdefault("created", utc_now())
+                frontmatter["updated"] = utc_now()
+                self.storage.write_path(relative, render_markdown(parsed.body, frontmatter))
+            await self.indexer._index_path(path, note_id)
 
     async def reconcile_deleted(self, path: Path) -> None:
-        relative = self.storage.paths.display(path)
-        with self.indexer.database.connect() as connection:
-            row = connection.execute("SELECT id FROM notes WHERE path=?", (relative,)).fetchone()
-        if row:
-            self.indexer.remove_note(row["id"])
+        async with self._mutation_lock:
+            relative = self.storage.paths.display(path)
+            with self.indexer.database.connect() as connection:
+                row = connection.execute(
+                    "SELECT id FROM notes WHERE path=?", (relative,)
+                ).fetchone()
+            if row:
+                self.indexer.remove_note(row["id"], relative)
 
     def response(self, note_id: str) -> dict[str, object]:
         row, raw, parsed = self.get_by_id(note_id)
@@ -151,15 +169,36 @@ class MemoryService:
             "updated": parsed.frontmatter.get("updated"),
         }
 
-    def expand_link_hits(self, connection, hits, limit):
+    def expand_link_hits(self, connection, hits, limit, path_prefix=None, tags=None):
         seen = {hit.chunk_id for hit in hits}
         expanded = list(hits)
+        clauses = [
+            "l.source_note_id=?",
+            "c.note_id=l.target_note_id",
+            "n.id=c.note_id",
+        ]
+        params_suffix: list[object] = []
+        if path_prefix:
+            clauses.append("n.path LIKE ? ESCAPE '\\'")
+            escaped = (
+                path_prefix.rstrip("/")
+                .replace("\\", "\\\\")
+                .replace("%", "\\%")
+                .replace("_", "\\_")
+            )
+            params_suffix.append(escaped + "/%")
+        if tags:
+            placeholders = ",".join("?" for _ in tags)
+            clauses.append(
+                f"c.note_id IN (SELECT note_id FROM note_tags WHERE tag IN ({placeholders}))"
+            )
+            params_suffix.extend(tag.casefold().lstrip("#") for tag in tags)
         for hit in hits:
             rows = connection.execute(
                 "SELECT c.id,c.note_id,c.content,c.heading_path,n.path,n.title FROM links l "
                 "JOIN chunks c ON c.note_id=l.target_note_id JOIN notes n ON n.id=c.note_id "
-                "WHERE l.source_note_id=? LIMIT 5",
-                (hit.note_id,),
+                "WHERE " + " AND ".join(clauses) + " LIMIT 5",
+                (hit.note_id, *params_suffix),
             ).fetchall()
             for row in rows:
                 if row["id"] in seen:

@@ -41,5 +41,10 @@ async def search(
                     else reciprocal_rank_fusion(keyword, semantic, index.config.rrf_k)
                 )[:limit]
         if expand_links and results:
-            results = index.expand_link_hits(connection, results, limit)
+            if path_prefix or tags:
+                results = index.expand_link_hits(
+                    connection, results, limit, path_prefix, tags
+                )
+            else:
+                results = index.expand_link_hits(connection, results, limit)
         return results[:limit]

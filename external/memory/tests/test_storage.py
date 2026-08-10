@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 
 from memory_service.domain.errors import ServiceError
-from memory_service.indexing.chunker import chunk_note
+from memory_service.indexing.chunker import _split_unit, chunk_note, estimate_tokens
 from memory_service.storage.markdown import parse_markdown
 from memory_service.storage.paths import VaultPaths
 
@@ -40,6 +40,27 @@ def test_chunker_is_deterministic_and_preserves_heading_context():
         (item.position, item.content_hash) for item in second
     ]
     assert first[0].heading_path == ["Root", "Memory"]
+
+
+def test_chunker_splits_long_text_and_keeps_code_line_boundaries():
+    parsed = parse_markdown(
+        "# Root\n\n## Details\n\n"
+        + "paragraph word " * 80
+        + "\n\n- item one\n- item two\n\n"
+        + "```python\n"
+        + "\n".join(f"value_{index} = {index}" for index in range(30))
+        + "\n```\n"
+    )
+    chunks = chunk_note(parsed, target=20, maximum=30, overlap=2)
+    assert len(chunks) > 2
+    assert all(estimate_tokens(chunk.content) <= 30 for chunk in chunks)
+    assert all(chunk.heading_path == ["Root", "Details"] for chunk in chunks)
+
+    code = "```python\n" + "\n".join(f"line_{index}" for index in range(20)) + "\n```"
+    units = _split_unit(code, 8)
+    assert len(units) > 1
+    source_lines = code.splitlines()
+    assert [line for unit in units for line in unit.splitlines()] == source_lines
 
 
 def test_path_traversal_is_rejected(tmp_path: Path):

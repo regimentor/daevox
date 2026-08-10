@@ -1,12 +1,22 @@
 from fastapi import APIRouter, Request
 
+from memory_service.api import ERROR_RESPONSES
 from memory_service.domain.schemas import SearchRequest, SearchResponse, SearchResult
 from memory_service.retrieval.hybrid import search
 
 router = APIRouter(prefix="/v1/search", tags=["search"])
 
 
-@router.post("", response_model=SearchResponse)
+@router.post(
+    "",
+    response_model=SearchResponse,
+    responses=ERROR_RESPONSES,
+    summary="Search notes",
+    description=(
+        "Searches indexed Markdown chunks using keyword, semantic or hybrid retrieval. "
+        "Semantic-only search returns 503 when embeddings are unavailable."
+    ),
+)
 async def search_notes(request: Request, payload: SearchRequest):
     resources = request.app.state.resources
     hits = await search(
