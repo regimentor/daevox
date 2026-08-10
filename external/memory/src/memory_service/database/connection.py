@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import logging
 import sqlite3
 import threading
 from pathlib import Path
 
 from memory_service.database.schema import SCHEMA, vector_schema
+
+logger = logging.getLogger(__name__)
 
 
 class Database:
@@ -16,6 +19,7 @@ class Database:
         self._vector_schema_ready = False
         self._vector_load_attempted = False
         self._vector_error: str | None = None
+        self._vector_error_logged = False
 
     def connect(self) -> sqlite3.Connection:
         connection = sqlite3.connect(self.path, timeout=30)
@@ -32,6 +36,13 @@ class Database:
         except Exception as exc:
             self._vector_loaded = False
             self._vector_error = str(exc)
+            if not self._vector_error_logged:
+                logger.warning(
+                    "sqlite-vec unavailable; semantic index disabled error=%s",
+                    self._vector_error,
+                    extra={"error": self._vector_error},
+                )
+                self._vector_error_logged = True
         finally:
             self._vector_load_attempted = True
             try:
@@ -55,12 +66,29 @@ class Database:
                 except sqlite3.Error as exc:
                     self._vector_schema_ready = False
                     self._vector_error = str(exc)
+                    logger.warning(
+                        "failed to initialize sqlite-vec schema dimension=%s error=%s",
+                        dimension,
+                        self._vector_error,
+                        extra={"dimension": dimension, "error": self._vector_error},
+                    )
                 connection.execute(
                     "INSERT INTO index_meta(key, value) VALUES('embedding_dimension', ?) "
                     "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
                     (str(dimension),),
                 )
             connection.commit()
+        logger.info(
+            "database initialized path=%s vector_available=%s embedding_dimension=%s",
+            self.path,
+            self.vector_available,
+            dimension,
+            extra={
+                "path": str(self.path),
+                "vector_available": self.vector_available,
+                "embedding_dimension": dimension,
+            },
+        )
 
     @property
     def vector_available(self) -> bool:

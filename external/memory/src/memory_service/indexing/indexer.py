@@ -187,8 +187,12 @@ class Indexer:
                     )
             connection.commit()
         self.resolve_links()
-        logger.info(
-            "indexed note", extra={"note_id": note_id, "path": path, "chunk_count": len(chunks)}
+        logger.debug(
+            "indexed note note_id=%s path=%s chunk_count=%s",
+            note_id,
+            path,
+            len(chunks),
+            extra={"note_id": note_id, "path": path, "chunk_count": len(chunks)},
         )
         return note_id
 
@@ -306,7 +310,19 @@ class Indexer:
         result: dict[str, object] = {"indexed": changed, "deleted": deleted}
         if duplicates:
             result["duplicates"] = duplicates
+            logger.warning(
+                "duplicate note IDs found during reconciliation count=%s",
+                len(duplicates),
+                extra={"count": len(duplicates)},
+            )
         self.resolve_links()
+        logger.info(
+            "vault reconciliation completed indexed=%s deleted=%s duplicates=%s",
+            changed,
+            deleted,
+            len(duplicates),
+            extra=result,
+        )
         return result
 
     def _vectors_missing(self, note_id: str) -> bool:

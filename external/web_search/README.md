@@ -17,10 +17,15 @@ web_open   → URL validation → httpx → extraction → Markdown
 - Chromium для Playwright.
 
 ```bash
+cd /path/to/daevox
+cp .env.example .env
 cd external/web_search
 uv sync
 uv run playwright install chromium
 ```
+
+Все настройки запуска хранятся в корневом `.env`; отдельный `.env` внутри
+сервиса не нужен.
 
 `pyproject.toml` содержит runtime-зависимости, `uv.lock` фиксирует разрешённое окружение, а dev-зависимости находятся в отдельной группе `dev`.
 
@@ -29,7 +34,7 @@ uv run playwright install chromium
 По умолчанию сервис слушает только loopback:
 
 ```bash
-uv run uvicorn websearch.main:app --host 127.0.0.1 --port 8080
+uv run websearch
 ```
 
 Проверки:
@@ -85,7 +90,7 @@ curl -X POST http://127.0.0.1:8080/v1/web_open \
 
 ## Конфигурация
 
-Скопируйте `.env.example` в `.env` при необходимости. Приложение работает и без `.env` с безопасными defaults. Все лимиты — настройки `pydantic-settings`; важные значения:
+Приложение читает корневой `.env` и работает без него с безопасными defaults. Все лимиты — настройки `pydantic-settings`; важные значения:
 
 | Переменная | Default | Назначение |
 | --- | ---: | --- |

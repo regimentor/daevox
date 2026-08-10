@@ -159,7 +159,7 @@ async function readPayload(response: Response): Promise<unknown> {
   }
 }
 
-const defaultBaseUrl = "http://127.0.0.1:9000";
+const defaultBaseUrl = `http://${process.env.WEB_SEARCH_HOST ?? "127.0.0.1"}:${process.env.WEB_SEARCH_PORT ?? "9000"}`;
 
 class WebSearchClient {
   private readonly baseUrl: string;

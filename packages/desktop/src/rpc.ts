@@ -3,6 +3,7 @@ import {
   type DialogSummary,
   nextCompletionChannel,
   type Message,
+  type MessageCreatedEvent,
   type NextCompletionTransportRequest,
 } from "@daevox/contracts";
 
@@ -13,6 +14,7 @@ type DaevoxBridge = {
   deleteDialog(dialogId: string): Promise<void>;
   addMessage(request: NextCompletionTransportRequest): Promise<Message>;
   onAgentStream(listener: AgentStreamListener): void;
+  onNewMessage?(listener: (event: MessageCreatedEvent) => void): void;
 };
 
 declare global {

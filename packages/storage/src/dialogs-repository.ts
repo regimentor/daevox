@@ -26,6 +26,23 @@ class DialogsRepository {
     });
   }
 
+  findLatestUngroomedWithMessages() {
+    return this.client.dialogs.findFirst({
+      where: {
+        memoryGroomed: false,
+        messages: { some: {} },
+      },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    });
+  }
+
+  markMemoryGroomed(id: string) {
+    return this.client.dialogs.update({
+      where: { id },
+      data: { memoryGroomed: true },
+    });
+  }
+
   delete(id: string) {
     return this.client.dialogs.delete({
       where: { id },

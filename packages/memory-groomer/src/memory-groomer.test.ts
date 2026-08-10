@@ -77,10 +77,14 @@ describe("MemoryGroomer", () => {
     expect(request).toMatchObject({
       model: "memory-model",
       reasoning_effort: "low",
+      stream: true,
       messages: [
         { role: "system", content: memoryGroomerSystemPrompt },
-        { role: "user", content: "I prefer concise answers." },
-        { role: "assistant", content: "Understood." },
+        {
+          role: "user",
+          content:
+            "<dialogue_transcript>\n[message 1 | user]\nI prefer concise answers.\n\n[message 2 | agent]\nUnderstood.\n</dialogue_transcript>",
+        },
       ],
     });
     expect(
@@ -109,6 +113,10 @@ describe("MemoryGroomer", () => {
     expect(report).toEqual({ response: "Nothing to save.", toolCalls: [] });
     expect(runTools.mock.calls[0]?.[0].messages).toEqual([
       { role: "system", content: memoryGroomerSystemPrompt },
+      {
+        role: "user",
+        content: "<dialogue_transcript>\n\n</dialogue_transcript>",
+      },
     ]);
   });
 
@@ -165,6 +173,37 @@ describe("MemoryGroomer", () => {
     ]);
     expect(report.toolCalls.every((call) => call.status === "complete")).toBe(
       true,
+    );
+  });
+
+  test("logs reasoning metadata from streaming model output", async () => {
+    const finalContent = vi.fn().mockResolvedValue("Saved.");
+    const chunks = [
+      { choices: [{ delta: { reasoning_content: "Search first. " } }] },
+      { choices: [{ delta: { reasoning_content: "Then save. " } }] },
+    ];
+    const completion = {
+      finalContent,
+      async *[Symbol.asyncIterator]() {
+        yield* chunks;
+      },
+    };
+    runTools.mockReturnValue(completion);
+
+    await new MemoryGroomer("http://memory", "model", "low", {
+      openAIClient: makeClient(),
+      memoryClient: makeMemoryClient(),
+    }).groom([makeMessage("user", "Remember this preference.")]);
+
+    expect(finalContent).toHaveBeenCalledOnce();
+    expect(console.info).toHaveBeenCalledWith(
+      "[memory-groomer] agent reasoning",
+      expect.objectContaining({
+        event: "agent_reasoning",
+        reasoning_available: true,
+        reasoning_chars: 25,
+        decision: "Saved.",
+      }),
     );
   });
 

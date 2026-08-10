@@ -8,8 +8,6 @@
   "exclude": ["dist"],
   "references": [
     { "path": "../contracts" },
-    { "path": "../domain" },
-    { "path": "../storage" },
     { "path": "../ui" }
   ]
 }

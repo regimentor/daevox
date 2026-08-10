@@ -27,7 +27,9 @@ const MessageSchema = z.object({
   actor: z.enum(["user", "agent"]),
   type: z.literal(["completion", "user"]),
   content: z.string(),
-  createdAt: z.date(),
+  // JSON transports encode dates as ISO strings; coercion keeps the domain
+  // model typed as Date while allowing the same schema on both sides.
+  createdAt: z.coerce.date(),
   tools: z.array(AgentToolCallSchema).optional(),
   sources: z.array(AgentSourceSchema).optional(),
   metrics: AgentGenerationMetricsSchema.optional(),

@@ -15,12 +15,25 @@ class ElectronApi implements Api {
   private readonly streamListeners = new Set<AgentStreamListener>();
   private readonly listeners = new Set<NewMessageListener>();
   private readonly mutex = new Mutex();
+  private readonly pendingRequests = new Set<string>();
+  private readonly deliveredResponses = new Set<string>();
 
   constructor(private readonly bridge: DaevoxBridge) {
     bridge.onAgentStream((event) => {
       for (const listener of this.streamListeners) {
         listener(event);
       }
+    });
+    bridge.onNewMessage?.((event) => {
+      const requestId = event.requestId;
+      if (event.message.actor === "user" && requestId) {
+        if (this.pendingRequests.has(requestId)) return;
+      }
+      if (event.message.actor === "agent" && requestId) {
+        if (this.deliveredResponses.has(requestId)) return;
+        this.deliveredResponses.add(requestId);
+      }
+      this.notifyListeners(event);
     });
   }
 
@@ -54,17 +67,24 @@ class ElectronApi implements Api {
     return this.mutex.runExclusive(async () => {
       const parsedMessage = MessageSchema.parse(message);
       const requestId = crypto.randomUUID();
+      this.pendingRequests.add(requestId);
 
       this.notifyListeners({ dialogId, message: parsedMessage });
-
-      const response = await this.bridge.addMessage({
-        dialogId,
-        message: parsedMessage,
-        requestId,
-      });
-      const parsedResponse = MessageSchema.parse(response);
-
-      this.notifyListeners({ dialogId, message: parsedResponse });
+      try {
+        const response = await this.bridge.addMessage({
+          dialogId,
+          message: parsedMessage,
+          requestId,
+        });
+        const parsedResponse = MessageSchema.parse(response);
+        if (!this.deliveredResponses.has(requestId)) {
+          this.deliveredResponses.add(requestId);
+          this.notifyListeners({ dialogId, message: parsedResponse });
+        }
+        setTimeout(() => this.deliveredResponses.delete(requestId), 60_000);
+      } finally {
+        this.pendingRequests.delete(requestId);
+      }
     });
   }
 

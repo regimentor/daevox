@@ -10,7 +10,8 @@ const createMemoryCreateTool = (
 ) =>
   zodFunction({
     name: "memory_create",
-    description: "Create a Markdown note in the local memory vault.",
+    description:
+      "Create a Markdown note in the local memory vault. The path must be vault-relative and end in .md, for example nodejs/tech-stack.md.",
     parameters: MemoryCreateToolRequestSchema,
     function: async (input) => {
       const request = {

@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import sqlite3
 import tempfile
+import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -103,6 +104,22 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
         resources = Resources(settings)
         app.state.resources = resources
+        logger.info(
+            "memory service starting vault=%s db=%s embedding_provider=%s "
+            "watch_enabled=%s git_enabled=%s",
+            settings.vault_path,
+            settings.db_path,
+            settings.embedding_provider,
+            settings.watch_enabled,
+            settings.git_enabled,
+            extra={
+                "vault_path": str(settings.vault_path),
+                "db_path": str(settings.db_path),
+                "embedding_provider": settings.embedding_provider,
+                "watch_enabled": settings.watch_enabled,
+                "git_enabled": settings.git_enabled,
+            },
+        )
         try:
             if hasattr(resources.provider, "initialize"):
                 try:
@@ -112,6 +129,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     resources.embedding_error = str(exc)
                     logger.exception("embedding provider initialization failed")
             await resources.indexer.reconcile()
+            logger.info(
+                "memory service ready ready=%s vector_available=%s",
+                resources.ready,
+                resources.database.vector_available,
+                extra={
+                    "ready": resources.ready,
+                    "vector_available": resources.database.vector_available,
+                },
+            )
             if settings.watch_enabled:
                 resources.watcher = VaultWatcher(
                     resources.paths.root, resources.memory, settings.watch_debounce_ms
@@ -119,6 +145,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 resources.watcher_task = __import__("asyncio").create_task(resources.watcher.run())
             yield
         finally:
+            logger.info("memory service stopping")
             if resources.watcher:
                 resources.watcher.stop()
             if resources.watcher_task:
@@ -142,9 +169,37 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         lifespan=lifespan,
     )
 
+    @app.middleware("http")
+    async def log_requests(request: Request, call_next):
+        started = time.perf_counter()
+        status_code = 500
+        try:
+            response = await call_next(request)
+            status_code = response.status_code
+            return response
+        finally:
+            logger.debug(
+                "http request %s %s status=%s duration_ms=%.2f",
+                request.method,
+                request.url.path,
+                status_code,
+                (time.perf_counter() - started) * 1000,
+                extra={
+                    "method": request.method,
+                    "path": request.url.path,
+                    "status_code": status_code,
+                    "duration_ms": round((time.perf_counter() - started) * 1000, 2),
+                },
+            )
+
     @app.exception_handler(ServiceError)
     async def service_error_handler(request: Request, exc: ServiceError) -> JSONResponse:
-        logger.warning("service error", extra={"operation": request.url.path, "code": exc.code})
+        logger.warning(
+            "service error path=%s code=%s",
+            request.url.path,
+            exc.code,
+            extra={"operation": request.url.path, "code": exc.code},
+        )
         return JSONResponse(
             {"error": {"code": exc.code, "message": exc.message}}, status_code=exc.status_code
         )
@@ -153,6 +208,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def validation_error_handler(
         request: Request, exc: RequestValidationError
     ) -> JSONResponse:
+        logger.warning(
+            "request validation failed path=%s error_count=%s",
+            request.url.path,
+            len(exc.errors()),
+            extra={"operation": request.url.path, "error_count": len(exc.errors())},
+        )
         return JSONResponse(
             {"error": {"code": "invalid_request", "message": "Request validation failed"}},
             status_code=422,
@@ -160,7 +221,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.exception_handler(sqlite3.Error)
     async def sqlite_error_handler(request: Request, exc: sqlite3.Error) -> JSONResponse:
-        logger.exception("unexpected SQLite error", extra={"operation": request.url.path})
+        logger.exception(
+            "unexpected SQLite error path=%s",
+            request.url.path,
+            extra={"operation": request.url.path},
+        )
         return JSONResponse(
             {"error": {"code": "database_error", "message": "Database operation failed"}},
             status_code=500,
@@ -168,7 +233,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.exception_handler(Exception)
     async def unexpected_error_handler(request: Request, exc: Exception) -> JSONResponse:
-        logger.exception("unexpected service error", extra={"operation": request.url.path})
+        logger.exception(
+            "unexpected service error path=%s",
+            request.url.path,
+            extra={"operation": request.url.path},
+        )
         return JSONResponse(
             {"error": {"code": "internal_error", "message": "Internal server error"}},
             status_code=500,

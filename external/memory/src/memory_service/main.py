@@ -11,6 +11,7 @@ from memory_service.config import Settings
 
 def _configure_logging() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
+    logging.getLogger("watchfiles").setLevel(logging.WARNING)
 
 
 def run() -> None:
@@ -22,7 +23,13 @@ def run() -> None:
     args = parser.parse_args()
     settings = Settings().resolve_paths()
     if args.command == "serve":
-        uvicorn.run("memory_service.main:app", host=settings.host, port=settings.port, reload=False)
+        uvicorn.run(
+            "memory_service.main:app",
+            host=settings.host,
+            port=settings.port,
+            reload=False,
+            access_log=False,
+        )
         return
     import asyncio
 

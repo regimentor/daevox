@@ -1,11 +1,8 @@
 import { app, BrowserWindow, shell } from "electron";
 import { fileURLToPath } from "node:url";
-import {
-  createPrismaClient,
-  DialogsMessagesRepository,
-  DialogsRepository,
-} from "@daevox/storage";
-import { registerIpcHandlers } from "./register-ipc-handlers.js";
+import { messageCreatedChannel } from "./transport-channels.js";
+import { OrchestratorClient } from "./orchestrator-client.js";
+import { registerTransportHandlers } from "./register-transport-handlers.js";
 
 const createWindow = () => {
   const win = new BrowserWindow({
@@ -35,22 +32,27 @@ const createWindow = () => {
 
 app
   .whenReady()
-  .then(async () => {
-    const client = createPrismaClient();
-    const dialogs = new DialogsRepository(client);
-    await dialogs.create();
-
-    registerIpcHandlers({
-      dialogs,
-      messages: new DialogsMessagesRepository(client),
+  .then(() => {
+    const client = new OrchestratorClient();
+    registerTransportHandlers(client);
+    client.onAgentStream((event) => {
+      for (const win of BrowserWindow.getAllWindows()) {
+        win.webContents.send("agent-stream", event);
+      }
     });
+    client.onMessageCreated((event) => {
+      for (const win of BrowserWindow.getAllWindows()) {
+        win.webContents.send(messageCreatedChannel, event);
+      }
+    });
+    client.connect();
     createWindow();
 
     app.on("before-quit", () => {
-      void client.$disconnect();
+      client.stop();
     });
   })
   .catch((error) => {
-    console.error("[desktop] storage initialization failed", error);
+    console.error("[desktop] orchestrator initialization failed", error);
     app.quit();
   });

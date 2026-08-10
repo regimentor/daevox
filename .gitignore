@@ -11,3 +11,5 @@ storybook-static
 coverage
 __screenshots__
 tsconfig.tsbuildinfo
+.vault
+.env

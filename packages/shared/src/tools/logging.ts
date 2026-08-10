@@ -62,22 +62,9 @@ class ToolLogger {
       error: "",
     });
 
-    console.info(`[${this.namespace}] tool call`, {
-      event: "tool_call",
-      tool: toolName,
-      input: formattedInput,
-    });
-
     try {
       const result = await serviceCall();
       this.onToolResult?.(toolName, result);
-
-      console.info(`[${this.namespace}] tool result`, {
-        event: "tool_result",
-        tool: toolName,
-        duration_ms: Math.round(performance.now() - startedAt),
-        result: formatLogValue(result),
-      });
 
       this.onToolEvent?.({
         toolCallId,

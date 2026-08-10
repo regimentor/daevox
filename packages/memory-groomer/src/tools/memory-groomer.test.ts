@@ -52,6 +52,14 @@ describe("memory groomer schemas", () => {
       content: "",
       frontmatter: {},
     });
+    expect(
+      MemoryCreateToolRequestSchema.safeParse({
+        path: "nodejs/tech-stack",
+        title: null,
+        content: null,
+        frontmatter: null,
+      }).success,
+    ).toBe(false);
   });
 
   test("require tool fields and accept nullable optional API fields", () => {

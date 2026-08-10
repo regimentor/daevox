@@ -1,0 +1,38 @@
+{
+  "name": "@daevox/orchestrator",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc --build",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@daevox/contracts": "^1.0.0",
+    "@daevox/domain": "^1.0.0",
+    "@daevox/memory-groomer": "^1.0.0",
+    "@daevox/storage": "^1.0.0",
+    "@nestjs/common": "^11.1.6",
+    "@nestjs/core": "^11.1.6",
+    "@nestjs/event-emitter": "^3.0.1",
+    "@nestjs/platform-express": "^11.1.6",
+    "@nestjs/platform-ws": "^11.1.6",
+    "@nestjs/websockets": "^11.1.6",
+    "async-mutex": "^0.5.0",
+    "eventemitter2": "^6.4.9",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2",
+    "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "vitest": "latest"
+  }
+}
