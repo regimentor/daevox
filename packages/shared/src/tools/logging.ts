@@ -5,6 +5,12 @@ const maxLogValueLength = 1_000;
 type ToolEventListener = (event: AgentToolCall) => void;
 type ToolResultListener = (toolName: string, result: unknown) => void;
 
+type ToolLoggerOptions = {
+  namespace: string;
+  onToolEvent?: ToolEventListener | undefined;
+  onToolResult?: ToolResultListener | undefined;
+};
+
 const formatLogValue = (value: unknown): string => {
   let serialized: string | undefined;
 
@@ -24,10 +30,19 @@ const formatLogValue = (value: unknown): string => {
 };
 
 class ToolLogger {
-  constructor(
-    private readonly onToolEvent?: ToolEventListener,
-    private readonly onToolResult?: ToolResultListener,
-  ) {}
+  private readonly namespace: string;
+  private readonly onToolEvent: ToolEventListener | undefined;
+  private readonly onToolResult: ToolResultListener | undefined;
+
+  constructor({
+    namespace,
+    onToolEvent,
+    onToolResult,
+  }: ToolLoggerOptions) {
+    this.namespace = namespace;
+    this.onToolEvent = onToolEvent;
+    this.onToolResult = onToolResult;
+  }
 
   async run<Result>(
     toolName: string,
@@ -47,7 +62,7 @@ class ToolLogger {
       error: "",
     });
 
-    console.info("[agent] tool call", {
+    console.info(`[${this.namespace}] tool call`, {
       event: "tool_call",
       tool: toolName,
       input: formattedInput,
@@ -57,7 +72,7 @@ class ToolLogger {
       const result = await serviceCall();
       this.onToolResult?.(toolName, result);
 
-      console.info("[agent] tool result", {
+      console.info(`[${this.namespace}] tool result`, {
         event: "tool_result",
         tool: toolName,
         duration_ms: Math.round(performance.now() - startedAt),
@@ -77,7 +92,7 @@ class ToolLogger {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
 
-      console.error("[agent] tool error", {
+      console.error(`[${this.namespace}] tool error`, {
         event: "tool_error",
         tool: toolName,
         duration_ms: Math.round(performance.now() - startedAt),
@@ -99,4 +114,9 @@ class ToolLogger {
 }
 
 export { ToolLogger };
-export type { AgentToolCall, ToolEventListener, ToolResultListener };
+export type {
+  AgentToolCall,
+  ToolEventListener,
+  ToolLoggerOptions,
+  ToolResultListener,
+};

@@ -15,5 +15,5 @@ export {
 } from "./web_search/index.js";
 export type { WebSearchRequest } from "./web_search/index.js";
 export { AgentToolService } from "./tool-service.js";
-export { ToolLogger } from "./logging.js";
-export type { AgentToolCall, ToolEventListener } from "./logging.js";
+export { ToolLogger } from "@daevox/shared";
+export type { AgentToolCall, ToolEventListener } from "@daevox/shared";

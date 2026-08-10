@@ -1,9 +1,9 @@
 import { zodFunction } from "openai/helpers/zod";
-import { ToolLogger } from "../logging.js";
+import { ToolLogger } from "@daevox/shared";
 import { webOpen } from "./service.js";
 import { WebOpenToolRequestSchema } from "./types.js";
 
-const createWebOpenTool = (logger = new ToolLogger()) =>
+const createWebOpenTool = (logger = new ToolLogger({ namespace: "agent" })) =>
   zodFunction({
     name: "web_open",
     description:

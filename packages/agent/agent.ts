@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import type { AgentToolCall } from "@daevox/contracts";
+import type { AgentToolCall } from "@daevox/shared";
 import { GenerationMetricsTracker } from "./src/metrics.js";
 import { AgentToolService } from "./src/tools/index.js";
 

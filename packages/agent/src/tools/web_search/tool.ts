@@ -1,9 +1,9 @@
 import { zodFunction } from "openai/helpers/zod";
-import { ToolLogger } from "../logging.js";
+import { ToolLogger } from "@daevox/shared";
 import { webSearch } from "./service.js";
 import { WebSearchToolRequestSchema } from "./types.js";
 
-const createWebSearchTool = (logger = new ToolLogger()) =>
+const createWebSearchTool = (logger = new ToolLogger({ namespace: "agent" })) =>
   zodFunction({
     name: "web_search",
     description:

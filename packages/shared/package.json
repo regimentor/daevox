@@ -1,5 +1,5 @@
 {
-  "name": "@daevox/agent",
+  "name": "@daevox/shared",
   "version": "1.0.0",
   "type": "module",
   "main": "./dist/index.js",
@@ -10,14 +10,17 @@
       "import": "./dist/index.js"
     }
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
-    "build": "tsc --build"
+    "build": "tsc --build",
+    "test": "vitest run src"
   },
   "dependencies": {
-    "@daevox/contracts": "^1.0.0",
-    "@daevox/external-clients": "^1.0.0",
-    "@daevox/shared": "^1.0.0",
-    "openai": "^7.4.0",
-    "zod": "^4.4.3"
+    "@daevox/contracts": "^1.0.0"
+  },
+  "devDependencies": {
+    "vitest": "latest"
   }
 }

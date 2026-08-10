@@ -3,7 +3,6 @@ export { GenerationMetricsTracker, estimateTokenCount } from "./src/metrics.js";
 export type { AgentGenerationMetrics } from "@daevox/contracts";
 export {
   AgentToolService,
-  ToolLogger,
   webOpen,
   webOpenTool,
   webSearch,
@@ -18,7 +17,8 @@ export type {
   AgentToolCall,
   ToolEventListener,
   ToolResultListener,
-} from "./src/tools/logging.js";
+} from "@daevox/shared";
+export { ToolLogger } from "@daevox/shared";
 export { WebOpenPayloadSchema } from "@daevox/external-clients";
 export type { WebOpenPayload } from "@daevox/external-clients";
 export { default as agentTestTaskPrompt } from "./prompts/agent-test-task.js";

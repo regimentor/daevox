@@ -6,9 +6,5 @@
   },
   "include": ["./**/*.ts"],
   "exclude": ["dist"],
-  "references": [
-    { "path": "../contracts" },
-    { "path": "../external-clients" },
-    { "path": "../shared" }
-  ]
+  "references": [{ "path": "../contracts" }]
 }

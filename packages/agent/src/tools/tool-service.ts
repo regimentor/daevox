@@ -2,7 +2,7 @@ import {
   ToolLogger,
   type ToolEventListener,
   type ToolResultListener,
-} from "./logging.js";
+} from "@daevox/shared";
 import { createWebOpenTool } from "./web_open/tool.js";
 import { createWebSearchTool } from "./web_search/tool.js";
 
@@ -13,7 +13,11 @@ class AgentToolService {
     onToolEvent?: ToolEventListener,
     onToolResult?: ToolResultListener,
   ) {
-    const logger = new ToolLogger(onToolEvent, onToolResult);
+    const logger = new ToolLogger({
+      namespace: "agent",
+      onToolEvent,
+      onToolResult,
+    });
 
     this.tools = [createWebSearchTool(logger), createWebOpenTool(logger)];
   }

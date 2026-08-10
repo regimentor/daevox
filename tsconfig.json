@@ -2,11 +2,13 @@
   "files": [],
   "references": [
     { "path": "./packages/contracts" },
+    { "path": "./packages/shared" },
     { "path": "./packages/agent" },
     { "path": "./packages/domain" },
     { "path": "./packages/ui" },
     { "path": "./packages/desktop" },
     { "path": "./packages/storage" },
-    { "path": "./packages/external-clients" }
+    { "path": "./packages/external-clients" },
+    { "path": "./packages/memory-groomer" }
   ]
 }
