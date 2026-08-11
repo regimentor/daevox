@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
@@ -14,6 +15,8 @@ from memory_service.storage.markdown import (
     render_markdown,
     utc_now,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def new_uuid7() -> str:
@@ -87,6 +90,12 @@ class MemoryService:
             content = str(frontmatter.pop("__content"))
             self.storage.write_path(path, render_markdown(content, frontmatter))
             await self.indexer._index_path(self.storage.paths.absolute(path), note_id)
+            logger.info(
+                "note created note_id=%s path=%s",
+                note_id,
+                path,
+                extra={"note_id": note_id, "path": path},
+            )
             return {"id": note_id, "path": path}
 
     def get_by_id(self, note_id: str):
@@ -121,6 +130,13 @@ class MemoryService:
             if new_path != old_path:
                 self.storage.delete_path(old_path)
             await self.indexer._index_path(self.storage.paths.absolute(new_path), note_id)
+            logger.info(
+                "note updated note_id=%s path=%s renamed=%s",
+                note_id,
+                new_path,
+                new_path != old_path,
+                extra={"note_id": note_id, "path": new_path, "renamed": new_path != old_path},
+            )
             return {"id": note_id, "path": new_path}
 
     async def delete(self, note_id: str) -> None:
@@ -128,6 +144,12 @@ class MemoryService:
             row, _, _ = self.get_by_id(note_id)
             self.storage.delete_path(row["path"])
             self.indexer.remove_note(note_id, row["path"])
+            logger.info(
+                "note deleted note_id=%s path=%s",
+                note_id,
+                row["path"],
+                extra={"note_id": note_id, "path": row["path"]},
+            )
 
     async def reconcile_path(self, path: Path) -> None:
         async with self._mutation_lock:
@@ -144,7 +166,19 @@ class MemoryService:
                 frontmatter.setdefault("created", utc_now())
                 frontmatter["updated"] = utc_now()
                 self.storage.write_path(relative, render_markdown(parsed.body, frontmatter))
+                logger.info(
+                    "assigned note id during reconciliation note_id=%s path=%s",
+                    note_id,
+                    relative,
+                    extra={"note_id": note_id, "path": relative},
+                )
             await self.indexer._index_path(path, note_id)
+            logger.debug(
+                "reconciled note note_id=%s path=%s",
+                note_id,
+                relative,
+                extra={"note_id": note_id, "path": relative},
+            )
 
     async def reconcile_deleted(self, path: Path) -> None:
         async with self._mutation_lock:
@@ -155,6 +189,12 @@ class MemoryService:
                 ).fetchone()
             if row:
                 self.indexer.remove_note(row["id"], relative)
+                logger.info(
+                    "removed deleted note from index note_id=%s path=%s",
+                    row["id"],
+                    relative,
+                    extra={"note_id": row["id"], "path": relative},
+                )
 
     def response(self, note_id: str) -> dict[str, object]:
         row, raw, parsed = self.get_by_id(note_id)

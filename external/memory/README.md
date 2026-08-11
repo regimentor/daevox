@@ -5,19 +5,23 @@
 ## Setup
 
 ```bash
+cd /path/to/daevox
+cp .env.example .env
 cd external/memory
 uv sync
-cp .env.example .env
 ```
 
-При первом запуске Sentence Transformers скачает выбранную модель (`BAAI/bge-m3` по умолчанию). Для быстрых тестов можно использовать `MEMORY_EMBEDDING_PROVIDER=fake`.
+Все настройки запуска хранятся в корневом `.env`; отдельный `.env` внутри
+сервиса не нужен.
+
+При первом запуске Sentence Transformers скачает выбранную модель
+(`sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` по умолчанию, около 0,5 ГБ).
+Для быстрых тестов можно использовать `MEMORY_EMBEDDING_PROVIDER=fake`.
 
 ## Run
 
 ```bash
 uv run memory-service serve
-# или
-uv run uvicorn memory_service.main:app --host 127.0.0.1 --port 8765
 ```
 
 Документация API доступна на `/docs`, runtime-схема — `/openapi.json`, а экспортированный
@@ -25,7 +29,17 @@ uv run uvicorn memory_service.main:app --host 127.0.0.1 --port 8765
 
 ## Configuration
 
-Основные переменные: `MEMORY_VAULT_PATH`, `MEMORY_DATA_PATH`, `MEMORY_DB_PATH`, `MEMORY_OPENAPI_PATH`, `MEMORY_EMBEDDING_MODEL`, `MEMORY_EMBEDDING_DEVICE`, `MEMORY_WATCH_ENABLED`, `MEMORY_GIT_ENABLED`, `MEMORY_GIT_AUTO_COMMIT`, `MEMORY_SEARCH_DEFAULT_LIMIT` и настройки chunker `MEMORY_CHUNK_*`. Полный список находится в `.env.example`.
+Основные переменные: `MEMORY_VAULT_PATH`, `MEMORY_DATA_PATH`, `MEMORY_DB_PATH`, `MEMORY_OPENAPI_PATH`, `MEMORY_EMBEDDING_MODEL`, `MEMORY_EMBEDDING_DEVICE`, `MEMORY_WATCH_ENABLED`, `MEMORY_GIT_ENABLED`, `MEMORY_GIT_AUTO_COMMIT`, `MEMORY_SEARCH_DEFAULT_LIMIT` и настройки chunker `MEMORY_CHUNK_*`. Полный список находится в корневом [`.env.example`](../../.env.example).
+
+`MEMORY_EMBEDDING_DEVICE` принимает `auto`, `cpu`, `cuda` или конкретную карту
+(`cuda:0`, `cuda:1`, ...). Например, чтобы использовать вторую видеокарту:
+
+```bash
+MEMORY_EMBEDDING_DEVICE=cuda:1 uv run memory-service serve
+```
+
+В режиме `auto` при нехватке памяти на автоматически выбранной CUDA-карте модель
+повторно загружается на CPU. При явно заданном `cuda:N` ошибка CUDA не скрывается.
 
 ## Basic API usage
 

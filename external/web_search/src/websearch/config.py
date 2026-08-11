@@ -1,4 +1,5 @@
 from functools import lru_cache
+from pathlib import Path
 from typing import Annotated
 
 from pydantic import Field, field_validator
@@ -6,7 +7,11 @@ from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=Path(__file__).resolve().parents[4] / ".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
     host: str = "127.0.0.1"
     port: int = Field(default=8080, ge=1, le=65535)

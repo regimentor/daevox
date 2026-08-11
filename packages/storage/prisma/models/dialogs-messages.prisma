@@ -8,6 +8,7 @@ model DialogsMessages {
   tools     Json?
   sources   Json?
   metrics   Json?
+  memory    Json?
   dialog    Dialogs  @relation(fields: [dialogId], references: [id], onDelete: Cascade)
 
   @@index([dialogId, createdAt])

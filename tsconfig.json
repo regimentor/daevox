@@ -8,6 +8,7 @@
     { "path": "./packages/ui" },
     { "path": "./packages/desktop" },
     { "path": "./packages/storage" },
+    { "path": "./packages/orchestrator" },
     { "path": "./packages/external-clients" },
     { "path": "./packages/memory-groomer" }
   ]

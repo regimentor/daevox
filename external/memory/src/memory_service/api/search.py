@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Request
 
 from memory_service.api import ERROR_RESPONSES
@@ -5,6 +7,7 @@ from memory_service.domain.schemas import SearchRequest, SearchResponse, SearchR
 from memory_service.retrieval.hybrid import search
 
 router = APIRouter(prefix="/v1/search", tags=["search"])
+logger = logging.getLogger(__name__)
 
 
 @router.post(
@@ -27,6 +30,20 @@ async def search_notes(request: Request, payload: SearchRequest):
         payload.path_prefix,
         payload.tags,
         payload.expand_links,
+    )
+    logger.debug(
+        "memory search completed mode=%s result_count=%s limit=%s",
+        payload.mode,
+        len(hits),
+        payload.limit or resources.settings.search_default_limit,
+        extra={
+            "mode": payload.mode,
+            "result_count": len(hits),
+            "limit": payload.limit or resources.settings.search_default_limit,
+            "has_path_prefix": payload.path_prefix is not None,
+            "tag_count": len(payload.tags),
+            "expand_links": payload.expand_links,
+        },
     )
     return SearchResponse(
         query=payload.query,

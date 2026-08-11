@@ -6,11 +6,15 @@ import {
   deleteDialogChannel,
   getDialogMessagesChannel,
   type AgentStreamListener,
+  MessageCreatedEventSchema,
+  type MessageCreatedEvent,
   listDialogsChannel,
   nextCompletionChannel,
   type NextCompletionTransportRequest,
   type Message,
 } from "@daevox/contracts";
+
+const messageCreatedChannel = "message-created";
 
 contextBridge.exposeInMainWorld("daevox", {
   listDialogs: (): Promise<unknown> => ipcRenderer.invoke(listDialogsChannel),
@@ -24,6 +28,11 @@ contextBridge.exposeInMainWorld("daevox", {
   onAgentStream: (listener: AgentStreamListener): void => {
     ipcRenderer.on(agentStreamChannel, (_event, event: unknown) => {
       listener(AgentStreamEventSchema.parse(event));
+    });
+  },
+  onNewMessage: (listener: (event: MessageCreatedEvent) => void): void => {
+    ipcRenderer.on(messageCreatedChannel, (_event, event: unknown) => {
+      listener(MessageCreatedEventSchema.parse(event));
     });
   },
 });

@@ -17,6 +17,12 @@ class VaultWatcher:
         self.stop_event = asyncio.Event()
 
     async def run(self) -> None:
+        logger.debug(
+            "vault watcher started root=%s debounce_ms=%s",
+            self.root,
+            self.debounce_ms,
+            extra={"root": str(self.root), "debounce_ms": self.debounce_ms},
+        )
         async for changes in awatch(
             self.root,
             debounce=self.debounce_ms,
@@ -33,7 +39,12 @@ class VaultWatcher:
                     elif change == Change.deleted and path.suffix.lower() == ".md":
                         await self.service.reconcile_deleted(path)
                 except Exception:
-                    logger.exception("vault watcher failed", extra={"path": str(path)})
+                    logger.exception(
+                        "vault watcher failed path=%s",
+                        path,
+                        extra={"path": str(path)},
+                    )
+        logger.debug("vault watcher stopped root=%s", self.root, extra={"root": str(self.root)})
 
     @staticmethod
     def _filter(change: Change, path: str) -> bool:

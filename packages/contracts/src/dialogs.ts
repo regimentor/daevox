@@ -3,8 +3,8 @@ import type { Message } from "./message.js";
 
 const DialogSummarySchema = z.object({
   id: z.string(),
-  createdAt: z.date(),
-  updatedAt: z.date(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
 });
 
 type DialogSummary = {
@@ -15,8 +15,11 @@ type DialogSummary = {
 
 type NewMessageEvent = {
   dialogId: string;
+  requestId?: string;
   message: Message;
 };
 
+type MessageCreatedEvent = NewMessageEvent & { requestId: string };
+
 export { DialogSummarySchema };
-export type { DialogSummary, NewMessageEvent };
+export type { DialogSummary, MessageCreatedEvent, NewMessageEvent };

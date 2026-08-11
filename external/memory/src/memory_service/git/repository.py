@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import logging
 import re
 import subprocess
 import threading
 from pathlib import Path
 
 from memory_service.domain.errors import ServiceError, conflict, not_found
+
+logger = logging.getLogger(__name__)
 
 
 class GitRepository:
@@ -27,6 +30,12 @@ class GitRepository:
         except (OSError, subprocess.TimeoutExpired) as exc:
             raise ServiceError(503, "git_unavailable", str(exc)) from exc
         if check and result.returncode:
+            logger.warning(
+                "Git command failed command=%s return_code=%s",
+                args[0] if args else "git",
+                result.returncode,
+                extra={"command": args[0] if args else "git", "return_code": result.returncode},
+            )
             raise ServiceError(409, "git_error", result.stderr.strip() or "Git command failed")
         return result.stdout
 
@@ -45,6 +54,11 @@ class GitRepository:
         with self._lock:
             if not self.initialized:
                 self._run("init")
+                logger.info(
+                    "initialized Git repository path=%s",
+                    self.root,
+                    extra={"path": str(self.root)},
+                )
             return {"initialized": True, "path": str(self.root)}
 
     def status(self) -> dict[str, object]:
@@ -52,7 +66,13 @@ class GitRepository:
             if not self.initialized:
                 return {"initialized": False, "entries": []}
             output = self._run("status", "--porcelain", "--untracked-files=all")
-            return {"initialized": True, "entries": output.splitlines()}
+            entries = output.splitlines()
+            logger.debug(
+                "read Git status entry_count=%s",
+                len(entries),
+                extra={"entry_count": len(entries)},
+            )
+            return {"initialized": True, "entries": entries}
 
     def diff(self) -> str:
         with self._lock:
@@ -74,6 +94,7 @@ class GitRepository:
                 check=False,
             )
             if result.returncode == 0:
+                logger.info("Git checkpoint skipped; no Markdown changes")
                 return {"created": False}
             args = []
             if self.settings.git_author_name:
@@ -82,6 +103,7 @@ class GitRepository:
                 args.extend(["-c", f"user.email={self.settings.git_author_email}"])
             self._run(*args, "commit", "--only", "-m", message, "--", "*.md")
             commit = self._run("rev-parse", "HEAD").strip()
+            logger.info("created Git checkpoint commit=%s", commit, extra={"commit": commit})
             return {"created": True, "commit": commit, "message": message}
 
     def history(self, path: str | None = None, limit: int = 50) -> list[dict[str, str]]:

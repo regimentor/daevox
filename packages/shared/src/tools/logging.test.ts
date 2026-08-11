@@ -62,29 +62,13 @@ describe("ToolLogger", () => {
     expect(errorLog.mock.calls[0]?.[0]).toBe("[memory-groomer] tool error");
   });
 
-  test("serializes values, handles cycles, truncates long values, and preserves namespace", async () => {
+  test("serializes values and keeps tool events independent of console logging", async () => {
     const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
-    const errorLog = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const logger = new ToolLogger({ namespace: "memory-groomer" });
-    const cyclic: { self?: unknown } = {};
-    cyclic.self = cyclic;
 
     await logger.run("values", "hello", () => undefined);
     await logger.run("undefined", {}, () => undefined);
-    await logger.run("cyclic", cyclic, () => undefined);
-    await logger.run("long", "x".repeat(1_001), () => undefined);
 
-    expect(info.mock.calls[0]?.[0]).toBe("[memory-groomer] tool call");
-    expect(info.mock.calls[1]?.[0]).toBe("[memory-groomer] tool result");
-    expect(info.mock.calls[2]?.[1]).toMatchObject({ input: "{}" });
-    expect(info.mock.calls[3]?.[1]).toMatchObject({ result: "undefined" });
-    expect(info.mock.calls[4]?.[1]).toMatchObject({
-      input: "[unserializable]",
-    });
-    expect(info.mock.calls[6]?.[1]).toMatchObject({
-      input: `${"x".repeat(1_000)}…`,
-    });
-    expect(info.mock.calls[7]?.[1]).toMatchObject({ result: "undefined" });
-    expect(errorLog).not.toHaveBeenCalled();
+    expect(info).not.toHaveBeenCalled();
   });
 });

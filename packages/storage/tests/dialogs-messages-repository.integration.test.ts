@@ -40,6 +40,14 @@ const agentMessage: Message = {
     tokensPerSecond: 100,
     estimated: false,
   },
+  memory: {
+    status: "complete",
+    query: "GPU",
+    durationMs: 12,
+    resultCount: 1,
+    results: [{ title: "Hardware", path: "hardware.md" }],
+    error: "",
+  },
 };
 
 describe("DialogsMessagesRepository", () => {
@@ -79,6 +87,7 @@ describe("DialogsMessagesRepository", () => {
       tools: agentMessage.tools,
       sources: agentMessage.sources,
       metrics: agentMessage.metrics,
+      memory: agentMessage.memory,
     });
   });
 

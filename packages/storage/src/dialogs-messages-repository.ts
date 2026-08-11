@@ -25,6 +25,9 @@ class DialogsMessagesRepository {
         ...(message.metrics === undefined
           ? {}
           : { metrics: message.metrics as Prisma.InputJsonValue }),
+        ...(message.memory === undefined
+          ? {}
+          : { memory: message.memory as Prisma.InputJsonValue }),
       },
     });
   }

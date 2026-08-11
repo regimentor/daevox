@@ -1,11 +1,15 @@
 export {
   AgentGenerationMetricsSchema,
+  AgentMemoryLookupResultSchema,
+  AgentMemoryLookupSchema,
   AgentSourceSchema,
   AgentToolCallSchema,
   MessageSchema,
 } from "./message.js";
 export type {
   AgentGenerationMetrics,
+  AgentMemoryLookup,
+  AgentMemoryLookupResult,
   AgentSource,
   AgentToolCall,
   Message,
@@ -16,11 +20,21 @@ export type {
   StoredMessage,
 } from "./dialogs-messages.js";
 export { DialogSummarySchema } from "./dialogs.js";
-export type { DialogSummary, NewMessageEvent } from "./dialogs.js";
+export type {
+  DialogSummary,
+  NewMessageEvent,
+} from "./dialogs.js";
 export {
   AgentStreamEventSchema,
   NextCompletionSchema,
   NextCompletionTransportRequestSchema,
+  SendMessageRequestSchema,
+  HealthResponseSchema,
+  ListDialogsResponseSchema,
+  CreateDialogResponseSchema,
+  GetDialogMessagesResponseSchema,
+  MessageCreatedEventSchema,
+  OrchestratorEventSchema,
   agentStreamChannel,
   createDialogChannel,
   deleteDialogChannel,
@@ -35,4 +49,11 @@ export type {
   NewMessageListener,
   NextCompletionRequest,
   NextCompletionTransportRequest,
+  HealthResponse,
+  ListDialogsResponse,
+  CreateDialogResponse,
+  GetDialogMessagesResponse,
+  MessageCreatedEvent,
+  OrchestratorEvent,
+  SendMessageRequest,
 } from "./api.js";

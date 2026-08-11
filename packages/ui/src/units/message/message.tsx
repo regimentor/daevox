@@ -6,10 +6,12 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import type {
   AgentGenerationMetrics,
+  AgentMemoryLookup,
   AgentSource,
   AgentToolCall,
 } from "@daevox/contracts";
 import { Thinking, type ThinkingProps } from "../thinking/index.js";
+import { MemoryLookup } from "../memory-lookup/index.js";
 import { ToolCalls } from "../tool-calls/index.js";
 import { GenerationMetrics } from "./generation-metrics.js";
 import { Sources } from "../sources/index.js";
@@ -29,6 +31,7 @@ type MessageProps = {
   sources?: AgentSource[];
   sourcesComplete?: boolean;
   metrics?: AgentGenerationMetrics;
+  memory?: AgentMemoryLookup;
   onCopy?: () => void;
 };
 
@@ -151,6 +154,7 @@ const Message = ({
   sources,
   sourcesComplete = false,
   metrics,
+  memory,
   onCopy,
 }: MessageProps) => {
   const isRight = alignment === "right";
@@ -259,6 +263,12 @@ const Message = ({
       <div className={styles.content}>
         <p className={styles.author}>{author}</p>
         {hasThinking ? <Thinking {...(thinking ?? {})} /> : null}
+        {memory ? (
+          <MemoryLookup
+            lookup={memory}
+            isComplete={memory.status !== "running"}
+          />
+        ) : null}
         {tools?.length ? (
           <ToolCalls calls={tools} isComplete={toolsComplete} />
         ) : null}

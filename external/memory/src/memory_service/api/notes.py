@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Request, Response, status
 
 from memory_service.api import ERROR_RESPONSES
@@ -14,6 +16,7 @@ from memory_service.domain.schemas import (
 from memory_service.storage.markdown import parse_markdown, render_markdown, utc_now
 
 router = APIRouter(prefix="/v1/notes", tags=["notes"])
+logger = logging.getLogger(__name__)
 
 
 @router.post(
@@ -70,6 +73,13 @@ async def restore(request: Request, note_id: str, payload: RestoreRequest):
         frontmatter["updated"] = utc_now()
         resources.memory.storage.write_path(row["path"], render_markdown(parsed.body, frontmatter))
         await resources.indexer._index_path(resources.paths.absolute(row["path"]), note_id)
+    logger.info(
+        "note restored note_id=%s path=%s revision=%s",
+        note_id,
+        row["path"],
+        payload.revision,
+        extra={"note_id": note_id, "path": row["path"], "revision": payload.revision},
+    )
     return {"id": note_id, "path": row["path"], "revision": payload.revision}
 
 

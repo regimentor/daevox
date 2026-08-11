@@ -68,7 +68,7 @@ function createAgent({
     const completion = client.chat.completions.runTools(
       {
         model,
-        reasoning_effort: "low",
+        reasoning_effort: "high",
         max_tokens: maxCompletionTokens,
         stream: true as const,
         stream_options: { include_usage: true },

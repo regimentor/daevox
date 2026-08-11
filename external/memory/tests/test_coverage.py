@@ -40,6 +40,17 @@ def _hit(chunk_id: int, score: float, *, keyword=None, semantic=None) -> SearchH
     )
 
 
+def test_embedding_settings_use_small_multilingual_model_and_validate_device():
+    settings = Settings()
+    assert settings.embedding_model == (
+        "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+    )
+    assert Settings(embedding_device="cuda:1").embedding_device == "cuda:1"
+    assert Settings(embedding_device="CPU").embedding_device == "cpu"
+    with pytest.raises(ValueError, match="embedding_device"):
+        Settings(embedding_device="cuda:gpu0")
+
+
 def test_reciprocal_rank_fusion_merges_and_sorts_hits():
     keyword = [_hit(1, 0.8, keyword=0.8), _hit(2, 0.7, keyword=0.7)]
     semantic = [_hit(3, 0.6, keyword=0.6, semantic=0.6), _hit(1, 0.9, semantic=0.9)]

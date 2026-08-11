@@ -4,9 +4,80 @@ set -eu
 
 ROOT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 WEB_SEARCH_PID=
+MEMORY_PID=
+ORCHESTRATOR_PID=
 DESKTOP_PID=
-DIEVOX_MODEL=unsloth/GLM-4.7-Flash-GGUF:UD-Q4_K_XL
 REFRESH_STORAGE=0
+
+# Load the repository-wide dotenv file into the launcher environment.  This
+# makes the same configuration available to every service and to the
+# Node/Electron processes started by daevox.  Existing environment variables
+# win over .env, matching pydantic-settings' precedence rules.
+load_env_file() {
+    dotenv_file=$1
+
+    if [ ! -r "$dotenv_file" ]; then
+        return 0
+    fi
+
+    while IFS= read -r dotenv_line || [ -n "$dotenv_line" ]; do
+        case "$dotenv_line" in
+            ""|"#"*)
+                continue
+                ;;
+            export\ *)
+                dotenv_line=${dotenv_line#export }
+                ;;
+        esac
+
+        dotenv_key=${dotenv_line%%=*}
+        if [ "$dotenv_key" = "$dotenv_line" ]; then
+            continue
+        fi
+
+        case "$dotenv_key" in
+            ""|*[!A-Za-z0-9_]*)
+                continue
+                ;;
+        esac
+
+        # The key is validated above, so the indirect expansion is safe.
+        eval "dotenv_is_set=\${$dotenv_key+x}"
+        if [ -n "$dotenv_is_set" ]; then
+            continue
+        fi
+
+        dotenv_value=${dotenv_line#*=}
+        case "$dotenv_value" in
+            \"*\")
+                dotenv_value=${dotenv_value#\"}
+                dotenv_value=${dotenv_value%\"}
+                ;;
+            \'*\')
+                dotenv_value=${dotenv_value#\'}
+                dotenv_value=${dotenv_value%\'}
+                ;;
+        esac
+        # Expand the value as a shell assignment while keeping its contents
+        # quoted.  .env files are local configuration owned by the user.
+        eval "export $dotenv_key=\"\$dotenv_value\""
+    done < "$dotenv_file"
+}
+
+# The root .env is optional.  Environment variables supplied by the caller
+# take precedence and are inherited by every child process by default.
+load_env_file "$ROOT_DIR/.env"
+
+export DAEVOX_MODEL="${DAEVOX_MODEL:-unsloth/GLM-4.7-Flash-GGUF:UD-Q4_K_XL}"
+export MEMORY_VAULT_PATH="${MEMORY_VAULT_PATH:-$ROOT_DIR/.vault}"
+export WEB_SEARCH_HOST="${WEB_SEARCH_HOST:-${HOST:-127.0.0.1}}"
+export WEB_SEARCH_PORT="${WEB_SEARCH_PORT:-${PORT:-9000}}"
+if [ -z "${WEB_SEARCH_API_KEY:-}" ] && [ -n "${API_KEY:-}" ]; then
+    export WEB_SEARCH_API_KEY="$API_KEY"
+fi
+
+echo "DAEVOX_MODEL: $DAEVOX_MODEL"
+echo "MEMORY_VAULT_PATH: $MEMORY_VAULT_PATH"
 
 for arg in "$@"; do
     case "$arg" in
@@ -24,14 +95,24 @@ cleanup() {
     status=$?
     trap - EXIT INT TERM
 
-    if [ -n "$WEB_SEARCH_PID" ]; then
-        kill "$WEB_SEARCH_PID" 2>/dev/null || true
-        wait "$WEB_SEARCH_PID" 2>/dev/null || true
-    fi
-
     if [ -n "$DESKTOP_PID" ]; then
         kill "$DESKTOP_PID" 2>/dev/null || true
         wait "$DESKTOP_PID" 2>/dev/null || true
+    fi
+
+    if [ -n "$ORCHESTRATOR_PID" ]; then
+        kill "$ORCHESTRATOR_PID" 2>/dev/null || true
+        wait "$ORCHESTRATOR_PID" 2>/dev/null || true
+    fi
+
+    if [ -n "$MEMORY_PID" ]; then
+        kill "$MEMORY_PID" 2>/dev/null || true
+        wait "$MEMORY_PID" 2>/dev/null || true
+    fi
+
+    if [ -n "$WEB_SEARCH_PID" ]; then
+        kill "$WEB_SEARCH_PID" 2>/dev/null || true
+        wait "$WEB_SEARCH_PID" 2>/dev/null || true
     fi
 
     exit "$status"
@@ -46,7 +127,7 @@ if ! command -v npm >/dev/null 2>&1; then
 fi
 
 if ! command -v uv >/dev/null 2>&1; then
-    echo "daevox: uv is required to run external/web_search" >&2
+    echo "daevox: uv is required to run external/memory and external/web_search" >&2
     exit 127
 fi
 
@@ -69,13 +150,59 @@ echo "[daevox] Applying storage migrations..."
     npm run migrate
 )
 
-echo "[daevox] Rebuilding native modules for Electron..."
-npx @electron/rebuild -w better-sqlite3 -v 43.3.0
+echo "[daevox] Starting memory (logs below)..."
+(
+    cd "$ROOT_DIR/external/memory"
+    exec uv run memory-service serve
+) &
+MEMORY_PID=$!
+
+echo "[daevox] Waiting for memory readiness..."
+MEMORY_HOST_VALUE=${MEMORY_HOST:-127.0.0.1}
+MEMORY_PORT_VALUE=${MEMORY_PORT:-8765}
+MEMORY_URL="http://${MEMORY_HOST_VALUE}:${MEMORY_PORT_VALUE}"
+MEMORY_READY=0
+for _ in $(seq 1 600); do
+    if curl --silent --show-error --fail "$MEMORY_URL/health" >/dev/null 2>&1; then
+        MEMORY_READY=1
+        break
+    fi
+    sleep 0.1
+done
+if [ "$MEMORY_READY" -ne 1 ]; then
+    echo "daevox: memory did not become ready" >&2
+    exit 1
+fi
+
+echo "[daevox] Starting orchestrator (logs below)..."
+(
+    cd "$ROOT_DIR"
+    export MEMORY_SERVICE_URL="${MEMORY_SERVICE_URL:-$MEMORY_URL}"
+    exec node packages/orchestrator/dist/main.js
+) &
+ORCHESTRATOR_PID=$!
+
+echo "[daevox] Waiting for orchestrator readiness..."
+ORCHESTRATOR_URL="http://${DAEVOX_ORCHESTRATOR_HOST:-127.0.0.1}:${DAEVOX_ORCHESTRATOR_PORT:-8787}"
+ORCHESTRATOR_READY=0
+for _ in $(seq 1 100); do
+    if curl --silent --show-error --fail "$ORCHESTRATOR_URL/health" >/dev/null 2>&1; then
+        ORCHESTRATOR_READY=1
+        break
+    fi
+    sleep 0.1
+done
+if [ "$ORCHESTRATOR_READY" -ne 1 ]; then
+    echo "daevox: orchestrator did not become ready" >&2
+    exit 1
+fi
 
 echo "[daevox] Starting web_search (logs below)..."
 (
     cd "$ROOT_DIR/external/web_search"
-    exec uv run uvicorn websearch.main:app --host 127.0.0.1 --port 9000
+    exec uv run uvicorn websearch.main:app \
+        --host "$WEB_SEARCH_HOST" \
+        --port "$WEB_SEARCH_PORT"
 ) &
 WEB_SEARCH_PID=$!
 
@@ -86,6 +213,7 @@ echo "[daevox] Starting desktop (logs below)..."
 ) &
 DESKTOP_PID=$!
 
-# Keep this shell alive while the desktop application is running.  Its exit
-# triggers cleanup(), which also stops web_search.
+
+# Keep this shell alive while the desktop application is running. Its exit
+# triggers cleanup(), which stops the orchestrator, memory, and web_search too.
 wait "$DESKTOP_PID"

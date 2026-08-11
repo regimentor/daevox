@@ -57,6 +57,9 @@ const getMessageProps = (
     ...(message.metrics && {
       metrics: message.metrics,
     }),
+    ...(message.memory && {
+      memory: message.memory,
+    }),
     ...(isCompletedLastAgentMessage &&
       agentStream && {
         ...(hasReasoning
@@ -69,6 +72,7 @@ const getMessageProps = (
           : {}),
         tools: agentStream.tools,
         toolsComplete: true,
+        ...(agentStream.memory ? { memory: agentStream.memory } : {}),
       }),
   };
 };
@@ -141,6 +145,9 @@ const MessageHistory = ({
             {...(agentStream?.sources.length && {
               sources: agentStream.sources,
               sourcesComplete: agentStream.status === "complete",
+            })}
+            {...(agentStream?.memory && {
+              memory: agentStream.memory,
             })}
           >
             {agentStream?.response ?? ""}

@@ -1,3 +1,4 @@
+import re
 from functools import lru_cache
 from pathlib import Path
 
@@ -7,7 +8,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=Path(__file__).resolve().parents[4] / ".env",
         env_file_encoding="utf-8",
         env_prefix="MEMORY_",
         extra="ignore",
@@ -19,7 +20,8 @@ class Settings(BaseSettings):
     data_path: Path = Path("./data")
     db_path: Path = Path("./data/index.sqlite")
     openapi_path: Path = Path(__file__).resolve().parents[2] / "openapi.yaml"
-    embedding_model: str = "BAAI/bge-m3"
+    # Multilingual MiniLM is suitable for Russian and is well below 1 GiB.
+    embedding_model: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
     embedding_device: str = "auto"
     embedding_provider: str = "sentence-transformers"
     watch_enabled: bool = True
@@ -42,6 +44,17 @@ class Settings(BaseSettings):
         if value not in {"sentence-transformers", "fake"}:
             raise ValueError("embedding_provider must be sentence-transformers or fake")
         return value
+
+    @field_validator("embedding_device", mode="before")
+    @classmethod
+    def validate_embedding_device(cls, value: object) -> str:
+        if not isinstance(value, str):
+            raise ValueError("embedding_device must be auto, cpu, cuda, or cuda:N")
+
+        device = value.strip().lower()
+        if device == "auto" or device == "cpu" or re.fullmatch(r"cuda(?::[0-9]+)?", device):
+            return device
+        raise ValueError("embedding_device must be auto, cpu, cuda, or cuda:N")
 
     def resolve_paths(self, base_dir: Path | None = None) -> "Settings":
         base = (base_dir or Path.cwd()).resolve()

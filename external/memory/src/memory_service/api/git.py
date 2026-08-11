@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Request
 
 from memory_service.api import ERROR_RESPONSES
@@ -11,6 +13,7 @@ from memory_service.domain.schemas import (
 )
 
 router = APIRouter(prefix="/v1/git", tags=["git"])
+logger = logging.getLogger(__name__)
 
 
 @router.post(
@@ -21,7 +24,13 @@ router = APIRouter(prefix="/v1/git", tags=["git"])
     description="Initializes a Git repository in the configured Vault if one does not exist.",
 )
 async def init_git(request: Request):
-    return request.app.state.resources.git.init()
+    result = request.app.state.resources.git.init()
+    logger.info(
+        "Git repository initialized path=%s",
+        result["path"],
+        extra={"path": result["path"]},
+    )
+    return result
 
 
 @router.get(
@@ -53,7 +62,14 @@ async def git_diff(request: Request):
     description="Commits changed Markdown files in the Vault with the supplied message.",
 )
 async def checkpoint(request: Request, payload: CheckpointRequest):
-    return request.app.state.resources.git.checkpoint(payload.message)
+    result = request.app.state.resources.git.checkpoint(payload.message)
+    logger.info(
+        "Git checkpoint completed created=%s commit=%s",
+        result["created"],
+        result.get("commit"),
+        extra={"created": result["created"], "commit": result.get("commit")},
+    )
+    return result
 
 
 @router.get(
