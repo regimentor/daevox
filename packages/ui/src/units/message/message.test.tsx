@@ -67,6 +67,37 @@ describe("Message", () => {
     expect(body?.textContent).toContain("Bold\nSecond line");
   });
 
+  test("normalizes loose ordered lists emitted by the model", async () => {
+    const container = await render(
+      <Message author="Daevox" timestamp="12:34">
+        {"1.\n\n   **First item**\n\n2.\n\n   **Second item**"}
+      </Message>,
+    );
+    const body = container.querySelector(`.${styles.body}`);
+    const list = body?.querySelector("ol");
+    const items = list?.querySelectorAll(":scope > li");
+
+    expect(body?.querySelectorAll("ol")).toHaveLength(1);
+    expect(items).toHaveLength(2);
+    expect(items?.[0]?.textContent).toContain("First item");
+    expect(items?.[1]?.textContent).toContain("Second item");
+    expect(items?.[0]?.querySelector("strong")?.textContent).toBe("First item");
+  });
+
+  test("renders GFM task lists and keeps code-like list content safe", async () => {
+    const container = await render(
+      <Message author="Daevox" timestamp="12:34">
+        {"- [x] Done\n- [ ] Todo\n\n```markdown\n1.\n**Not a list**\n```"}
+      </Message>,
+    );
+    const body = container.querySelector(`.${styles.body}`);
+
+    expect(body?.querySelectorAll('input[type="checkbox"]')).toHaveLength(2);
+    expect(body?.querySelector(`.${styles.codeBlock}`)?.textContent).toContain(
+      "1.\n**Not a list**",
+    );
+  });
+
   test("renders GFM tables", async () => {
     const container = await render(
       <Message author="Daevox" timestamp="12:34">

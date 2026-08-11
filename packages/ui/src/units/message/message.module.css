@@ -14,6 +14,9 @@
 
 .right {
   --message-accent: #4f46e5;
+  align-self: flex-end;
+  width: fit-content;
+  max-width: min(100%, 52rem);
   background: var(--surface-secondary);
   color: var(--surface-secondary-foreground);
 }
@@ -39,6 +42,8 @@
 
 .right .content {
   align-items: flex-end;
+  flex: 0 1 auto;
+  width: 100%;
 }
 
 .author {
@@ -84,6 +89,19 @@
 .body :global(ol) {
   margin: 0;
   padding-inline-start: 1.5rem;
+  white-space: normal;
+}
+
+.body :global(li) {
+  white-space: normal;
+}
+
+.body :global(li > p:first-child) {
+  display: inline;
+}
+
+.body :global(li > p:not(:first-child)) {
+  margin-top: 0.75rem;
 }
 
 .body :global(table) {
@@ -215,7 +233,7 @@
 }
 
 .right .body {
-  text-align: right;
+  text-align: start;
 }
 
 .footer {

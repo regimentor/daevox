@@ -52,6 +52,7 @@ export default defineConfig({
           name: 'units',
           include: [
             'src/api.test.ts',
+            'src/pages/**/*.test.tsx',
             'src/units/**/*.test.tsx',
             'src/features/**/*.test.ts',
             'src/features/**/*.test.tsx',

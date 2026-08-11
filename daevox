@@ -8,6 +8,7 @@ MEMORY_PID=
 ORCHESTRATOR_PID=
 DESKTOP_PID=
 REFRESH_STORAGE=0
+REFRESH_MEMORY=0
 
 # Load the repository-wide dotenv file into the launcher environment.  This
 # makes the same configuration available to every service and to the
@@ -84,6 +85,9 @@ for arg in "$@"; do
         --refresh-storage)
             REFRESH_STORAGE=1
             ;;
+        --refresh-memory)
+            REFRESH_MEMORY=1
+            ;;
         *)
             echo "daevox: unknown argument: $arg" >&2
             exit 2
@@ -149,6 +153,14 @@ echo "[daevox] Applying storage migrations..."
     cd "$STORAGE_DIR"
     npm run migrate
 )
+
+if [ "$REFRESH_MEMORY" -eq 1 ]; then
+    echo "[daevox] Refreshing memory Vault and index..."
+    (
+        cd "$ROOT_DIR/external/memory"
+        exec uv run memory-service reset
+    )
+fi
 
 echo "[daevox] Starting memory (logs below)..."
 (
