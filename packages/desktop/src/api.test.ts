@@ -1,4 +1,8 @@
-import type { AgentStreamEvent, Message } from "@daevox/contracts";
+import type {
+  AgentStreamEvent,
+  CompletionErrorEvent,
+  Message,
+} from "@daevox/contracts";
 import { describe, expect, test, vi } from "vitest";
 import { ElectronApi, createApi } from "./api.js";
 
@@ -26,6 +30,10 @@ describe("ElectronApi", () => {
       createDialog,
       getDialogMessages,
       deleteDialog,
+      getContextInfo: vi.fn().mockResolvedValue({
+        model: "test-model",
+        contextWindowTokens: 4096,
+      }),
       addMessage: vi.fn(),
       onAgentStream: vi.fn(),
     });
@@ -43,6 +51,28 @@ describe("ElectronApi", () => {
 
   test("requires the Electron preload bridge", () => {
     expect(() => createApi()).toThrow("Electron API bridge is unavailable");
+  });
+
+  test("delegates and validates context information", async () => {
+    const getContextInfo = vi.fn().mockResolvedValue({
+      model: "selected-model",
+      contextWindowTokens: 32768,
+    });
+    const api = new ElectronApi({
+      listDialogs: vi.fn().mockResolvedValue([]),
+      createDialog: vi.fn(),
+      getDialogMessages: vi.fn().mockResolvedValue([]),
+      deleteDialog: vi.fn().mockResolvedValue(undefined),
+      getContextInfo,
+      addMessage: vi.fn(),
+      onAgentStream: vi.fn(),
+    });
+
+    await expect(api.getContextInfo()).resolves.toEqual({
+      model: "selected-model",
+      contextWindowTokens: 32768,
+    });
+    expect(getContextInfo).toHaveBeenCalledOnce();
   });
 
   test("publishes the user message immediately and the agent message after the RPC returns", async () => {
@@ -64,6 +94,10 @@ describe("ElectronApi", () => {
       createDialog: vi.fn().mockResolvedValue(dialog),
       getDialogMessages: vi.fn().mockResolvedValue([]),
       deleteDialog: vi.fn().mockResolvedValue(undefined),
+      getContextInfo: vi.fn().mockResolvedValue({
+        model: "test-model",
+        contextWindowTokens: 4096,
+      }),
       addMessage,
       onAgentStream: vi.fn(),
     });
@@ -101,6 +135,10 @@ describe("ElectronApi", () => {
       createDialog: vi.fn(),
       getDialogMessages: vi.fn().mockResolvedValue([]),
       deleteDialog: vi.fn().mockResolvedValue(undefined),
+      getContextInfo: vi.fn().mockResolvedValue({
+        model: "test-model",
+        contextWindowTokens: 4096,
+      }),
       addMessage: vi.fn(),
       onAgentStream: (listener) => {
         notifyStream = listener;
@@ -116,6 +154,36 @@ describe("ElectronApi", () => {
 
     api.onAgentStream(listener);
     notifyStream(event);
+
+    expect(listener).toHaveBeenCalledWith(event);
+  });
+
+  test("forwards completion errors to subscribers", () => {
+    let notifyError!: (event: CompletionErrorEvent) => void;
+    const api = new ElectronApi({
+      listDialogs: vi.fn().mockResolvedValue([]),
+      createDialog: vi.fn(),
+      getDialogMessages: vi.fn().mockResolvedValue([]),
+      deleteDialog: vi.fn().mockResolvedValue(undefined),
+      getContextInfo: vi.fn().mockResolvedValue({
+        model: "test-model",
+        contextWindowTokens: 4096,
+      }),
+      addMessage: vi.fn(),
+      onAgentStream: vi.fn(),
+      onCompletionError: (listener) => {
+        notifyError = listener;
+      },
+    });
+    const listener = vi.fn();
+    const event: CompletionErrorEvent = {
+      dialogId: dialog.id,
+      requestId: "request-1",
+      code: "response-too-long",
+    };
+
+    api.onCompletionError(listener);
+    notifyError(event);
 
     expect(listener).toHaveBeenCalledWith(event);
   });

@@ -1,15 +1,20 @@
 import { useState, type FormEvent, type KeyboardEvent } from "react";
+import { ContextProgress } from "../../../units/context-progress/index.js";
 import { Textarea } from "../../../units/textarea/index.js";
 import styles from "./message-input.module.css";
 
 type MessageInputProps = {
   onSubmit?: (content: string) => void | Promise<void>;
   isSending?: boolean;
+  promptTokens?: number | undefined;
+  contextWindowTokens?: number | undefined;
 };
 
 const MessageInput = ({
   onSubmit,
   isSending = false,
+  promptTokens,
+  contextWindowTokens,
 }: MessageInputProps) => {
   const [content, setContent] = useState("");
 
@@ -53,13 +58,19 @@ const MessageInput = ({
         onChange={(event) => setContent(event.target.value)}
         onKeyDown={handleKeyDown}
       />
-      <button
-        className={styles.submit}
-        type="submit"
-        disabled={isSending || !content.trim()}
-      >
-        Send
-      </button>
+      <div className={styles.controls}>
+        <ContextProgress
+          promptTokens={promptTokens}
+          contextWindowTokens={contextWindowTokens}
+        />
+        <button
+          className={styles.submit}
+          type="submit"
+          disabled={isSending || !content.trim()}
+        >
+          Send
+        </button>
+      </div>
     </form>
   );
 };

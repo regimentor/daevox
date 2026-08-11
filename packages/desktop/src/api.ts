@@ -1,5 +1,8 @@
 import {
   type AgentStreamListener,
+  type CompletionErrorListener,
+  ContextInfoSchema,
+  type ContextInfo,
   DialogSummarySchema,
   MessageSchema,
   type Api,
@@ -14,6 +17,8 @@ import type { DaevoxBridge } from "./rpc.js";
 class ElectronApi implements Api {
   private readonly streamListeners = new Set<AgentStreamListener>();
   private readonly listeners = new Set<NewMessageListener>();
+  private readonly completionErrorListeners =
+    new Set<CompletionErrorListener>();
   private readonly mutex = new Mutex();
   private readonly pendingRequests = new Set<string>();
   private readonly deliveredResponses = new Set<string>();
@@ -34,6 +39,11 @@ class ElectronApi implements Api {
         this.deliveredResponses.add(requestId);
       }
       this.notifyListeners(event);
+    });
+    bridge.onCompletionError?.((event) => {
+      for (const listener of this.completionErrorListeners) {
+        listener(event);
+      }
     });
   }
 
@@ -61,6 +71,12 @@ class ElectronApi implements Api {
 
   deleteDialog(dialogId: string): Promise<void> {
     return this.bridge.deleteDialog(dialogId);
+  }
+
+  getContextInfo(): Promise<ContextInfo> {
+    return this.bridge
+      .getContextInfo()
+      .then((contextInfo) => ContextInfoSchema.parse(contextInfo));
   }
 
   addMessage(dialogId: string, message: Message): Promise<void> {
@@ -94,6 +110,10 @@ class ElectronApi implements Api {
 
   onNewMessage(listener: NewMessageListener): void {
     this.listeners.add(listener);
+  }
+
+  onCompletionError(listener: CompletionErrorListener): void {
+    this.completionErrorListeners.add(listener);
   }
 
   private notifyListeners(event: NewMessageEvent): void {

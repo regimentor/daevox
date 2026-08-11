@@ -18,6 +18,10 @@ const AgentSourceSchema = z.object({
 
 const AgentGenerationMetricsSchema = z.object({
   completionTokens: z.number().int().nonnegative(),
+  // Older persisted messages do not have prompt usage yet. Keep this field
+  // optional so those messages remain readable and simply do not render a
+  // context indicator.
+  promptTokens: z.number().int().nonnegative().optional(),
   durationMs: z.number().int().nonnegative(),
   tokensPerSecond: z.number().nonnegative(),
   estimated: z.boolean(),

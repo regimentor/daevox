@@ -36,6 +36,7 @@ const agentMessage: Message = {
   ],
   metrics: {
     completionTokens: 10,
+    promptTokens: 123,
     durationMs: 100,
     tokensPerSecond: 100,
     estimated: false,

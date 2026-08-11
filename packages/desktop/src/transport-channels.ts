@@ -1,3 +1,4 @@
 const messageCreatedChannel = "message-created";
+const completionErrorChannel = "completion-error";
 
-export { messageCreatedChannel };
+export { completionErrorChannel, messageCreatedChannel };

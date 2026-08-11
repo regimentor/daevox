@@ -3,6 +3,7 @@ import {
   type AgentSource,
   type AgentMemoryLookup,
   type AgentToolCall,
+  type CompletionErrorCode,
   type DialogMessagesStore,
   type Message,
   type NextCompletionRequest,
@@ -13,6 +14,7 @@ import { Inject, Injectable, Logger, Optional } from "@nestjs/common";
 import { EventEmitter2 } from "@nestjs/event-emitter";
 import { Mutex } from "async-mutex";
 import {
+  internalCompletionErrorEvent,
   internalAgentStreamEvent,
   internalMessageCreatedEvent,
 } from "./events.js";
@@ -45,6 +47,63 @@ const fallbackMessage = (memory?: AgentMemoryLookup): Message =>
     ...(memory ? { memory } : {}),
   });
 
+type ErrorLike = {
+  cause?: unknown;
+  code?: unknown;
+  message?: unknown;
+  name?: unknown;
+};
+
+const hasErrorInCauseChain = (
+  error: unknown,
+  predicate: (candidate: ErrorLike) => boolean,
+): boolean => {
+  const seen = new Set<object>();
+  let current: unknown = error;
+
+  while (typeof current === "object" && current !== null) {
+    if (seen.has(current)) {
+      return false;
+    }
+    seen.add(current);
+
+    const candidate = current as ErrorLike;
+    if (predicate(candidate)) {
+      return true;
+    }
+    current = candidate.cause;
+  }
+
+  return false;
+};
+
+const classifyCompletionError = (error: unknown): CompletionErrorCode => {
+  if (
+    hasErrorInCauseChain(
+      error,
+      (candidate) =>
+        candidate.name === "HeadersTimeoutError" ||
+        candidate.code === "UND_ERR_HEADERS_TIMEOUT",
+    )
+  ) {
+    return "network-timeout";
+  }
+
+  if (
+    hasErrorInCauseChain(
+      error,
+      (candidate) =>
+        candidate.name === "LengthFinishReasonError" ||
+        (typeof candidate.message === "string" &&
+          candidate.message.includes("length limit was reached")),
+    )
+  ) {
+    return "response-too-long";
+  }
+
+  return "unknown";
+};
+
 @Injectable()
 class CompletionService {
   private readonly logger = new Logger(CompletionService.name);
@@ -55,7 +114,8 @@ class CompletionService {
     private readonly messages: DialogMessagesStore,
     @Inject(EventEmitter2)
     private readonly events: EventEmitter2,
-    @Optional() @Inject(completionFunctionToken)
+    @Optional()
+    @Inject(completionFunctionToken)
     complete?: CompletionFunction,
   ) {
     this.defaultComplete = complete ?? getCompletion;
@@ -103,15 +163,17 @@ class CompletionService {
       let memory: AgentMemoryLookup | undefined;
       let response: Message;
       try {
-        response = await complete(
-          { history, message: userMessage },
-          callbacks,
-        );
+        response = await complete({ history, message: userMessage }, callbacks);
         if (memory && response.memory === undefined) {
           response = MessageSchema.parse({ ...response, memory });
         }
       } catch (error) {
         this.logger.error("Completion failed", error);
+        this.emitCompletionError(
+          dialogId,
+          requestId,
+          classifyCompletionError(error),
+        );
         response = fallbackMessage(memory);
       }
 
@@ -125,16 +187,50 @@ class CompletionService {
     this.events.emit(internalAgentStreamEvent, event);
   }
 
-  private emitMessage(dialogId: string, requestId: string, message: Message): void {
-    this.events.emit(internalMessageCreatedEvent, { dialogId, requestId, message });
+  private emitMessage(
+    dialogId: string,
+    requestId: string,
+    message: Message,
+  ): void {
+    this.events.emit(internalMessageCreatedEvent, {
+      dialogId,
+      requestId,
+      message,
+    });
+  }
+
+  private emitCompletionError(
+    dialogId: string,
+    requestId: string,
+    code: CompletionErrorCode,
+  ): void {
+    this.events.emit(internalCompletionErrorEvent, {
+      dialogId,
+      requestId,
+      code,
+    });
   }
 }
 
 type AgentStreamEvent =
-  | { dialogId: string; requestId: string; type: "reasoning" | "response"; content: string }
+  | {
+      dialogId: string;
+      requestId: string;
+      type: "reasoning" | "response";
+      content: string;
+    }
   | ({ dialogId: string; requestId: string; type: "tool" } & AgentToolCall)
   | ({ dialogId: string; requestId: string; type: "source" } & AgentSource)
-  | ({ dialogId: string; requestId: string; type: "memory" } & AgentMemoryLookup);
+  | ({
+      dialogId: string;
+      requestId: string;
+      type: "memory";
+    } & AgentMemoryLookup);
 
-export { CompletionService, fallbackMessage, toMessage };
+export {
+  classifyCompletionError,
+  CompletionService,
+  fallbackMessage,
+  toMessage,
+};
 export type { CompletionFunction };

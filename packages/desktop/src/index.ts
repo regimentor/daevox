@@ -1,6 +1,9 @@
 import { app, BrowserWindow, shell } from "electron";
 import { fileURLToPath } from "node:url";
-import { messageCreatedChannel } from "./transport-channels.js";
+import {
+  completionErrorChannel,
+  messageCreatedChannel,
+} from "./transport-channels.js";
 import { OrchestratorClient } from "./orchestrator-client.js";
 import { registerTransportHandlers } from "./register-transport-handlers.js";
 
@@ -43,6 +46,11 @@ app
     client.onMessageCreated((event) => {
       for (const win of BrowserWindow.getAllWindows()) {
         win.webContents.send(messageCreatedChannel, event);
+      }
+    });
+    client.onCompletionError((event) => {
+      for (const win of BrowserWindow.getAllWindows()) {
+        win.webContents.send(completionErrorChannel, event);
       }
     });
     client.connect();

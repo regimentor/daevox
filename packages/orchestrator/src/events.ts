@@ -1,8 +1,10 @@
 import {
   AgentStreamEventSchema,
+  CompletionErrorEventSchema,
   MessageCreatedEventSchema,
   OrchestratorEventSchema,
   type AgentStreamEvent,
+  type CompletionErrorEvent,
   type MessageCreatedEvent,
   type OrchestratorEvent,
 } from "@daevox/contracts";
@@ -13,10 +15,12 @@ import type { Server } from "ws";
 
 const internalAgentStreamEvent = "orchestrator.agent.stream";
 const internalMessageCreatedEvent = "orchestrator.message.created";
+const internalCompletionErrorEvent = "orchestrator.completion.error";
 const onCreateNewDialog = "onCreateNewDialog";
 
 type InternalAgentStreamEvent = AgentStreamEvent;
 type InternalMessageCreatedEvent = MessageCreatedEvent;
+type InternalCompletionErrorEvent = CompletionErrorEvent;
 
 @WebSocketGateway({ path: "/events" })
 class EventsGateway {
@@ -52,13 +56,26 @@ class OrchestratorEventHandlers {
       data: MessageCreatedEventSchema.parse(event),
     });
   }
+
+  @OnEvent(internalCompletionErrorEvent)
+  onCompletionError(event: InternalCompletionErrorEvent): void {
+    this.gateway.publish({
+      event: "completion.error",
+      data: CompletionErrorEventSchema.parse(event),
+    });
+  }
 }
 
 export {
   EventsGateway,
   OrchestratorEventHandlers,
   internalAgentStreamEvent,
+  internalCompletionErrorEvent,
   internalMessageCreatedEvent,
   onCreateNewDialog,
 };
-export type { InternalAgentStreamEvent, InternalMessageCreatedEvent };
+export type {
+  InternalAgentStreamEvent,
+  InternalCompletionErrorEvent,
+  InternalMessageCreatedEvent,
+};

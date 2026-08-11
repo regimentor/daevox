@@ -16,6 +16,7 @@ type StreamPart = {
   }>;
   usage?: {
     completion_tokens: number;
+    prompt_tokens?: number;
   } | null;
 };
 
@@ -38,6 +39,7 @@ class GenerationMetricsTracker {
   private durationMs = 0;
   private estimatedTokens = 0;
   private hasUsage = false;
+  private observedPromptTokens: number | undefined;
 
   observe(part: StreamPart, now = performance.now()): void {
     if (part.id !== this.currentStreamId) {
@@ -52,6 +54,11 @@ class GenerationMetricsTracker {
 
     if (part.usage) {
       this.hasUsage = true;
+      if (part.usage.prompt_tokens !== undefined) {
+        // Keep the latest request's prompt size. Summing prompt usage across
+        // tool rounds measures total work, not the current context window.
+        this.observedPromptTokens = part.usage.prompt_tokens;
+      }
     }
 
     const delta = part.choices?.[0]?.delta;
@@ -67,13 +74,20 @@ class GenerationMetricsTracker {
     );
   }
 
-  finalize(completionTokens: number): AgentGenerationMetrics {
+  finalize(
+    completionTokens: number,
+    promptTokens?: number,
+  ): AgentGenerationMetrics {
     const durationMs = Math.round(this.durationMs);
     const exact = this.hasUsage;
     const tokens = exact ? completionTokens : this.estimatedTokens;
+    const exactPromptTokens = promptTokens ?? this.observedPromptTokens;
 
     return {
       completionTokens: tokens,
+      ...(exactPromptTokens !== undefined
+        ? { promptTokens: exactPromptTokens }
+        : {}),
       durationMs,
       tokensPerSecond: tokensPerSecond(tokens, durationMs),
       estimated: !exact,

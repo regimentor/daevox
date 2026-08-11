@@ -1,5 +1,7 @@
 import {
   type AgentStreamListener,
+  type CompletionErrorListener,
+  type ContextInfo,
   type DialogSummary,
   nextCompletionChannel,
   type Message,
@@ -12,9 +14,11 @@ type DaevoxBridge = {
   createDialog(): Promise<DialogSummary>;
   getDialogMessages(dialogId: string): Promise<Message[]>;
   deleteDialog(dialogId: string): Promise<void>;
+  getContextInfo(): Promise<ContextInfo>;
   addMessage(request: NextCompletionTransportRequest): Promise<Message>;
   onAgentStream(listener: AgentStreamListener): void;
   onNewMessage?(listener: (event: MessageCreatedEvent) => void): void;
+  onCompletionError?(listener: CompletionErrorListener): void;
 };
 
 declare global {

@@ -1,8 +1,11 @@
 import {
   DialogSummarySchema,
+  ContextInfoSchema,
+  type CompletionErrorEvent,
   MessageSchema,
   OrchestratorEventSchema,
   type AgentStreamListener,
+  type ContextInfo,
   type DialogSummary,
   type Message,
   type MessageCreatedEvent,
@@ -16,6 +19,7 @@ type OrchestratorClientOptions = {
 };
 
 type MessageCreatedListener = (event: MessageCreatedEvent) => void;
+type CompletionErrorListener = (event: CompletionErrorEvent) => void;
 
 class OrchestratorHttpError extends Error {
   constructor(
@@ -30,6 +34,8 @@ class OrchestratorHttpError extends Error {
 class OrchestratorClient {
   private readonly streamListeners = new Set<AgentStreamListener>();
   private readonly messageListeners = new Set<MessageCreatedListener>();
+  private readonly completionErrorListeners =
+    new Set<CompletionErrorListener>();
   private readonly baseUrl: string;
   private readonly reconnectDelayMs: number;
   private socket: WebSocket | undefined;
@@ -46,7 +52,7 @@ class OrchestratorClient {
 
   async listDialogs(): Promise<DialogSummary[]> {
     const response = await this.request("/api/dialogs");
-    return (await response.json() as unknown[]).map((dialog) =>
+    return ((await response.json()) as unknown[]).map((dialog) =>
       DialogSummarySchema.parse(dialog),
     );
   }
@@ -60,7 +66,7 @@ class OrchestratorClient {
     const response = await this.request(
       `/api/dialogs/${encodeURIComponent(dialogId)}/messages`,
     );
-    return (await response.json() as unknown[]).map((message) =>
+    return ((await response.json()) as unknown[]).map((message) =>
       MessageSchema.parse(message),
     );
   }
@@ -69,6 +75,11 @@ class OrchestratorClient {
     await this.request(`/api/dialogs/${encodeURIComponent(dialogId)}`, {
       method: "DELETE",
     });
+  }
+
+  async getContextInfo(): Promise<ContextInfo> {
+    const response = await this.request("/api/context");
+    return ContextInfoSchema.parse(await response.json());
   }
 
   async addMessage(request: NextCompletionTransportRequest): Promise<Message> {
@@ -109,12 +120,16 @@ class OrchestratorClient {
     this.messageListeners.add(listener);
   }
 
+  onCompletionError(listener: CompletionErrorListener): void {
+    this.completionErrorListeners.add(listener);
+  }
+
   private async request(path: string, init?: RequestInit): Promise<Response> {
     const response = await fetch(`${this.baseUrl}${path}`, init);
     if (!response.ok) {
       let message = `Orchestrator request failed (${response.status})`;
       try {
-        const body = await response.json() as { message?: unknown };
+        const body = (await response.json()) as { message?: unknown };
         if (typeof body.message === "string") message = body.message;
       } catch {
         // Keep the status-based error when the server did not return JSON.
@@ -135,8 +150,12 @@ class OrchestratorClient {
         const event = OrchestratorEventSchema.parse(JSON.parse(raw.toString()));
         if (event.event === "agent.stream") {
           for (const listener of this.streamListeners) listener(event.data);
-        } else {
+        } else if (event.event === "message.created") {
           for (const listener of this.messageListeners) listener(event.data);
+        } else {
+          for (const listener of this.completionErrorListeners) {
+            listener(event.data);
+          }
         }
       } catch (error) {
         console.error("[desktop] invalid orchestrator event", error);
@@ -161,4 +180,8 @@ class OrchestratorClient {
 }
 
 export { OrchestratorClient, OrchestratorHttpError };
-export type { MessageCreatedListener, OrchestratorClientOptions };
+export type {
+  CompletionErrorListener,
+  MessageCreatedListener,
+  OrchestratorClientOptions,
+};

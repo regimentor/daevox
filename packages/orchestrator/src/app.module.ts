@@ -14,6 +14,8 @@ import type { OnModuleDestroy } from "@nestjs/common";
 import { EventEmitterModule } from "@nestjs/event-emitter";
 import { CompletionService } from "./completion-service.js";
 import { DialogsController } from "./dialogs.controller.js";
+import { ContextController } from "./context.controller.js";
+import { ContextService } from "./context.service.js";
 import { EventsGateway, OrchestratorEventHandlers } from "./events.js";
 import { getCompletion } from "@daevox/domain";
 import {
@@ -38,7 +40,7 @@ class PrismaLifecycle implements OnModuleDestroy {
 
 @Module({
   imports: [EventEmitterModule.forRoot()],
-  controllers: [DialogsController],
+  controllers: [DialogsController, ContextController],
   providers: [
     {
       provide: PrismaClient,
@@ -51,7 +53,8 @@ class PrismaLifecycle implements OnModuleDestroy {
     },
     {
       provide: DialogsMessagesRepository,
-      useFactory: (client: PrismaClient) => new DialogsMessagesRepository(client),
+      useFactory: (client: PrismaClient) =>
+        new DialogsMessagesRepository(client),
       inject: [PrismaClient],
     },
     {
@@ -92,6 +95,7 @@ class PrismaLifecycle implements OnModuleDestroy {
       inject: [PrismaClient],
     },
     CompletionService,
+    ContextService,
     EventsGateway,
     OrchestratorEventHandlers,
     MemoryGroomerService,

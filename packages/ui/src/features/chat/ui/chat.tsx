@@ -29,11 +29,18 @@ const Chat = ({ dialogId = "local-dialog", className }: ChatProps) => {
   const [isSending, setIsSending] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [contextWindowTokens, setContextWindowTokens] = useState<number>();
+
+  const lastAgentMessage = [...messages]
+    .reverse()
+    .find((message) => message.actor === "agent");
+  const promptTokens = lastAgentMessage?.metrics?.promptTokens ?? 0;
 
   useEffect(() => {
     let mounted = true;
     setActive(dialogId);
     setIsSending(false);
+    setContextWindowTokens(undefined);
     if (!uiApi.isConfigured()) {
       setIsLoading(false);
       return () => {
@@ -45,6 +52,21 @@ const Chat = ({ dialogId = "local-dialog", className }: ChatProps) => {
     clearStream();
     setIsLoading(true);
     setLoadError(null);
+
+    void uiApi
+      .getContextInfo()
+      .then((contextInfo) => {
+        if (mounted) {
+          setContextWindowTokens(contextInfo.contextWindowTokens);
+        }
+      })
+      .catch(() => {
+        // Context metadata is an optional UI enhancement. Hide the indicator
+        // when the model server does not expose a recognized limit.
+        if (mounted) {
+          setContextWindowTokens(undefined);
+        }
+      });
 
     void uiApi
       .getDialogMessages(dialogId)
@@ -113,6 +135,8 @@ const Chat = ({ dialogId = "local-dialog", className }: ChatProps) => {
       <MessageInput
         onSubmit={handleSubmit}
         isSending={isSending || isLoading}
+        promptTokens={promptTokens}
+        contextWindowTokens={contextWindowTokens}
       />
     </section>
   );

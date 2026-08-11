@@ -5,7 +5,10 @@ import type {
   StoredMessage,
 } from "@daevox/contracts";
 import { describe, expect, test, vi } from "vitest";
-import { CompletionService } from "./completion-service.js";
+import {
+  classifyCompletionError,
+  CompletionService,
+} from "./completion-service.js";
 
 const userMessage: Message = {
   actor: "user",
@@ -49,6 +52,30 @@ const recordsToStore = (initial: Message[] = []) => {
 };
 
 describe("orchestrator CompletionService", () => {
+  test.each([
+    [
+      "headers timeout",
+      Object.assign(new TypeError("fetch failed"), {
+        cause: { name: "HeadersTimeoutError", code: "UND_ERR_HEADERS_TIMEOUT" },
+      }),
+      "network-timeout",
+    ],
+    [
+      "length finish reason",
+      Object.assign(
+        new Error(
+          "Could not parse response content as the length limit was reached",
+        ),
+        {
+          name: "LengthFinishReasonError",
+        },
+      ),
+      "response-too-long",
+    ],
+  ])("classifies %s completion errors", (_name, error, code) => {
+    expect(classifyCompletionError(error)).toBe(code);
+  });
+
   test("translates memory callbacks into a separate stream event and persists the lookup", async () => {
     const { records, store } = recordsToStore();
     const events = new EventEmitter2();
@@ -103,7 +130,9 @@ describe("orchestrator CompletionService", () => {
       vi.fn().mockResolvedValue(response),
     );
 
-    await expect(service.addMessage("dialog-1", "request-1", userMessage)).resolves.toEqual(response);
+    await expect(
+      service.addMessage("dialog-1", "request-1", userMessage),
+    ).resolves.toEqual(response);
     expect(records).toHaveLength(2);
     expect(created).toHaveBeenCalledTimes(2);
     expect(created).toHaveBeenNthCalledWith(1, {
@@ -119,7 +148,11 @@ describe("orchestrator CompletionService", () => {
     const complete = vi.fn().mockRejectedValue(new Error("model unavailable"));
     const service = new CompletionService(store, new EventEmitter2(), complete);
 
-    const response = await service.addMessage("dialog-1", "request-1", userMessage);
+    const response = await service.addMessage(
+      "dialog-1",
+      "request-1",
+      userMessage,
+    );
 
     expect(complete).toHaveBeenCalledWith(
       { history: [previous], message: userMessage },
@@ -127,6 +160,29 @@ describe("orchestrator CompletionService", () => {
     );
     expect(response.content).toContain("Не удалось получить ответ");
     expect(records).toHaveLength(3);
+  });
+
+  test("emits a typed error notification before storing the fallback", async () => {
+    const { store } = recordsToStore();
+    const events = new EventEmitter2();
+    const completionError = vi.fn();
+    events.on("orchestrator.completion.error", completionError);
+    const error = Object.assign(new TypeError("fetch failed"), {
+      cause: { name: "HeadersTimeoutError", code: "UND_ERR_HEADERS_TIMEOUT" },
+    });
+    const service = new CompletionService(
+      store,
+      events,
+      vi.fn().mockRejectedValue(error),
+    );
+
+    await service.addMessage("dialog-1", "request-1", userMessage);
+
+    expect(completionError).toHaveBeenCalledWith({
+      dialogId: "dialog-1",
+      requestId: "request-1",
+      code: "network-timeout",
+    });
   });
 
   test("serializes concurrent completions for one dialog", async () => {

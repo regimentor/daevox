@@ -13,7 +13,7 @@ const defaultMemoryGroomerConfig = (): MemoryGroomerConfig => ({
   model:
     process.env.DAEVOX_MEMORY_GROOMER_MODEL ??
     process.env.DAEVOX_MODEL ??
-    "qwen3.6-35b-a3b",
+    "unsloth/GLM-4.7-Flash-GGUF:UD-Q4_K_XL",
   reasoningEffort: "xhigh",
   memoryServiceUrl:
     process.env.MEMORY_SERVICE_URL ?? "http://127.0.0.1:8765",

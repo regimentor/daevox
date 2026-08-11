@@ -1,6 +1,9 @@
 import OpenAI from "openai";
 import type { AgentToolCall } from "@daevox/shared";
-import { GenerationMetricsTracker } from "./src/metrics.js";
+import {
+  estimateTokenCount,
+  GenerationMetricsTracker,
+} from "./src/metrics.js";
 import { AgentToolService } from "./src/tools/index.js";
 
 type LocalDelta = {
@@ -39,7 +42,8 @@ const client = new OpenAI({
   apiKey: "YOUR_API_KEY",
 });
 
-const model = process.env.DAEVOX_MODEL ?? "qwen3.6-35b-a3b";
+const model =
+  process.env.DAEVOX_MODEL ?? "unsloth/GLM-4.7-Flash-GGUF:UD-Q4_K_XL";
 const maxCompletionTokens = 36_000;
 // One initial response, web_search, up to three web_open calls, and a final answer.
 const maxToolRounds = 6;
@@ -105,7 +109,29 @@ function createAgent({
     }
 
     const usage = await completion.totalUsage();
-    const finalMetrics = metrics.finalize(usage.completion_tokens);
+    // totalUsage() sums every tool round. That is useful for billing/metrics,
+    // but not for the context bar: tool results are transient and are not
+    // stored in the dialog history. Use the first prompt of this turn, which
+    // corresponds to the persisted conversation and stays comparable between
+    // turns.
+    const turnPromptTokens = [...completion.allChatCompletions()]
+      .map((chatCompletion) => chatCompletion.usage?.prompt_tokens)
+      .find(
+        (tokens): tokens is number =>
+          typeof tokens === "number" && tokens > 0,
+      );
+    const estimatedPromptTokens = estimateTokenCount(
+      [
+        { role: "system", content: systemPrompt },
+        ...conversation,
+      ]
+        .map(({ role, content }) => `${role}: ${content}`)
+        .join("\n"),
+    );
+    const finalMetrics = metrics.finalize(
+      usage.completion_tokens,
+      turnPromptTokens ?? estimatedPromptTokens,
+    );
 
     return {
       response: response.join(""),

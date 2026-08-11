@@ -344,6 +344,10 @@ describe("Chat", () => {
       createDialog: vi.fn(),
       getDialogMessages: vi.fn().mockResolvedValue([]),
       deleteDialog: vi.fn().mockResolvedValue(undefined),
+      getContextInfo: vi.fn().mockResolvedValue({
+        model: "test-model",
+        contextWindowTokens: 4096,
+      }),
       addMessage,
       onAgentStream: vi.fn(),
       onNewMessage: vi.fn(),
@@ -385,6 +389,10 @@ describe("Chat", () => {
       createDialog: vi.fn(),
       getDialogMessages: vi.fn().mockResolvedValue([]),
       deleteDialog: vi.fn().mockResolvedValue(undefined),
+      getContextInfo: vi.fn().mockResolvedValue({
+        model: "test-model",
+        contextWindowTokens: 4096,
+      }),
       addMessage,
       onAgentStream: vi.fn(),
       onNewMessage: vi.fn(),

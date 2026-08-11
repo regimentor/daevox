@@ -2,6 +2,7 @@ import { ipcMain } from "electron";
 import {
   createDialogChannel,
   deleteDialogChannel,
+  getContextInfoChannel,
   getDialogMessagesChannel,
   listDialogsChannel,
   nextCompletionChannel,
@@ -20,6 +21,7 @@ const registerTransportHandlers = (client: OrchestratorClient): void => {
     if (typeof dialogId !== "string") throw new Error("Invalid dialog id");
     return client.deleteDialog(dialogId);
   });
+  ipcMain.handle(getContextInfoChannel, () => client.getContextInfo());
   ipcMain.handle(nextCompletionChannel, (_event, request: unknown) =>
     client.addMessage(NextCompletionTransportRequestSchema.parse(request)),
   );

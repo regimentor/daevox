@@ -1,6 +1,8 @@
 import type {
   AgentStreamListener,
   Api,
+  CompletionErrorListener,
+  ContextInfo,
   DialogSummary,
   Message,
   NewMessageEvent,
@@ -12,6 +14,8 @@ class UiApi {
   private implementation: Api | undefined;
   private readonly streamListeners = new Set<AgentStreamListener>();
   private readonly listeners = new Set<NewMessageListener>();
+  private readonly completionErrorListeners =
+    new Set<CompletionErrorListener>();
 
   private constructor() {}
 
@@ -28,6 +32,10 @@ class UiApi {
 
     for (const listener of this.listeners) {
       implementation.onNewMessage(listener);
+    }
+
+    for (const listener of this.completionErrorListeners) {
+      implementation.onCompletionError?.(listener);
     }
   }
 
@@ -57,6 +65,14 @@ class UiApi {
     }
   }
 
+  async getContextInfo(): Promise<ContextInfo> {
+    if (this.implementation) {
+      return this.implementation.getContextInfo();
+    }
+
+    throw new Error("Context API is unavailable");
+  }
+
   async addMessage(dialogId: string, message: Message): Promise<void> {
     if (this.implementation) {
       await this.implementation.addMessage(dialogId, message);
@@ -81,6 +97,14 @@ class UiApi {
 
     if (this.implementation) {
       this.implementation.onNewMessage(listener);
+    }
+  }
+
+  onCompletionError(listener: CompletionErrorListener): void {
+    this.completionErrorListeners.add(listener);
+
+    if (this.implementation) {
+      this.implementation.onCompletionError?.(listener);
     }
   }
 

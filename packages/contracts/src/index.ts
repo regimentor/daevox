@@ -20,10 +20,7 @@ export type {
   StoredMessage,
 } from "./dialogs-messages.js";
 export { DialogSummarySchema } from "./dialogs.js";
-export type {
-  DialogSummary,
-  NewMessageEvent,
-} from "./dialogs.js";
+export type { DialogSummary, NewMessageEvent } from "./dialogs.js";
 export {
   AgentStreamEventSchema,
   NextCompletionSchema,
@@ -33,18 +30,26 @@ export {
   ListDialogsResponseSchema,
   CreateDialogResponseSchema,
   GetDialogMessagesResponseSchema,
+  ContextInfoSchema,
+  completionErrorCodes,
+  CompletionErrorCodeSchema,
+  CompletionErrorEventSchema,
   MessageCreatedEventSchema,
   OrchestratorEventSchema,
   agentStreamChannel,
   createDialogChannel,
   deleteDialogChannel,
   getDialogMessagesChannel,
+  getContextInfoChannel,
   listDialogsChannel,
   nextCompletionChannel,
 } from "./api.js";
 export type {
   AgentStreamEvent,
   AgentStreamListener,
+  CompletionErrorCode,
+  CompletionErrorEvent,
+  CompletionErrorListener,
   Api,
   NewMessageListener,
   NextCompletionRequest,
@@ -53,6 +58,7 @@ export type {
   ListDialogsResponse,
   CreateDialogResponse,
   GetDialogMessagesResponse,
+  ContextInfo,
   MessageCreatedEvent,
   OrchestratorEvent,
   SendMessageRequest,

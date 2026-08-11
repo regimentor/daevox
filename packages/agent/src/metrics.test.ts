@@ -36,13 +36,22 @@ describe("generation metrics", () => {
       {
         id: "round-2",
         choices: [],
-        usage: { completion_tokens: 42 },
+        usage: { completion_tokens: 42, prompt_tokens: 128 },
       },
       1_100,
     );
 
     expect(tracker.finalize(42)).toEqual({
       completionTokens: 42,
+      promptTokens: 128,
+      durationMs: 200,
+      tokensPerSecond: 210,
+      estimated: false,
+    });
+
+    expect(tracker.finalize(42, 128)).toEqual({
+      completionTokens: 42,
+      promptTokens: 128,
       durationMs: 200,
       tokensPerSecond: 210,
       estimated: false,
@@ -73,5 +82,24 @@ describe("generation metrics", () => {
       tokensPerSecond: 30,
       estimated: true,
     });
+
+    expect(tracker.finalize(0, 128).promptTokens).toBe(128);
+  });
+
+  test("keeps the latest prompt usage instead of summing tool rounds", () => {
+    const tracker = new GenerationMetricsTracker();
+
+    tracker.observe({
+      id: "round-1",
+      choices: [],
+      usage: { completion_tokens: 10, prompt_tokens: 512 },
+    });
+    tracker.observe({
+      id: "round-2",
+      choices: [],
+      usage: { completion_tokens: 20, prompt_tokens: 768 },
+    });
+
+    expect(tracker.finalize(30).promptTokens).toBe(768);
   });
 });

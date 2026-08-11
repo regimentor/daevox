@@ -1,5 +1,6 @@
 import type {
   Api,
+  CompletionErrorListener,
   DialogSummary,
   Message,
   NewMessageListener,
@@ -26,7 +27,11 @@ const loadApi = async () => {
 
 type UiApiInstance = Pick<
   import("./api.js").UiApi,
-  "addMessage" | "isConfigured" | "onNewMessage" | "setImplementation"
+  | "addMessage"
+  | "isConfigured"
+  | "onCompletionError"
+  | "onNewMessage"
+  | "setImplementation"
 >;
 
 const createUiApi = async () => {
@@ -39,20 +44,35 @@ const createUiApi = async () => {
 const createImplementation = () => {
   const addMessage = vi.fn().mockResolvedValue(undefined);
   const listeners: NewMessageListener[] = [];
+  const completionErrorListeners: CompletionErrorListener[] = [];
   const onNewMessage = vi.fn((listener: NewMessageListener) => {
     listeners.push(listener);
+  });
+  const onCompletionError = vi.fn((listener: CompletionErrorListener) => {
+    completionErrorListeners.push(listener);
   });
   const implementation: Api = {
     listDialogs: vi.fn().mockResolvedValue([dialog]),
     createDialog: vi.fn().mockResolvedValue(dialog),
     getDialogMessages: vi.fn().mockResolvedValue([]),
     deleteDialog: vi.fn().mockResolvedValue(undefined),
+    getContextInfo: vi.fn().mockResolvedValue({
+      model: "test-model",
+      contextWindowTokens: 4096,
+    }),
     addMessage,
     onAgentStream: vi.fn(),
     onNewMessage,
+    onCompletionError,
   };
 
-  return { addMessage, implementation, listeners };
+  return {
+    addMessage,
+    completionErrorListeners,
+    implementation,
+    listeners,
+    onCompletionError,
+  };
 };
 
 describe("UiApi", () => {
@@ -97,5 +117,18 @@ describe("UiApi", () => {
     expect(addMessage).toHaveBeenCalledOnce();
     expect(addMessage).toHaveBeenCalledWith(dialog.id, message);
     expect(listener).not.toHaveBeenCalled();
+  });
+
+  test("forwards completion error listeners to the implementation", async () => {
+    const uiApi = await createUiApi();
+    const listener = vi.fn<CompletionErrorListener>();
+    const { implementation, completionErrorListeners, onCompletionError } =
+      createImplementation();
+
+    uiApi.onCompletionError(listener);
+    uiApi.setImplementation(implementation);
+
+    expect(onCompletionError).toHaveBeenCalledOnce();
+    expect(completionErrorListeners).toContain(listener);
   });
 });
