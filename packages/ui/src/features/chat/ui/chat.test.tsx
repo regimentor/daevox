@@ -1,5 +1,5 @@
 import { act } from "react";
-import { fork } from "effector";
+import { allSettled, fork } from "effector";
 import { Provider } from "effector-react";
 import { describe, expect, test, vi } from "vitest";
 import chatStyles from "./chat.module.css";
@@ -9,6 +9,7 @@ import { uiApi } from "../../../api.js";
 import {
   $agentStream,
   $messages,
+  replaceMessages,
   type AgentStreamState,
   type ChatMessage,
 } from "../chat.store.js";
@@ -31,6 +32,82 @@ const renderChat = async (
   const container = await render(<Provider value={scope}>{chat}</Provider>);
 
   return { container, scope };
+};
+
+const mockPageScroll = (pageHeight = 240, scrollY = 140) => {
+  const originalDocumentScrollHeight = Object.getOwnPropertyDescriptor(
+    document.documentElement,
+    "scrollHeight",
+  );
+  const originalBodyScrollHeight = Object.getOwnPropertyDescriptor(
+    document.body,
+    "scrollHeight",
+  );
+  const originalScrollY = Object.getOwnPropertyDescriptor(window, "scrollY");
+  const originalInnerHeight = Object.getOwnPropertyDescriptor(
+    window,
+    "innerHeight",
+  );
+  const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => {});
+
+  Object.defineProperty(document.documentElement, "scrollHeight", {
+    configurable: true,
+    get: () => pageHeight,
+  });
+  Object.defineProperty(document.body, "scrollHeight", {
+    configurable: true,
+    get: () => pageHeight,
+  });
+  Object.defineProperty(window, "scrollY", {
+    configurable: true,
+    value: scrollY,
+  });
+  Object.defineProperty(window, "innerHeight", {
+    configurable: true,
+    value: 100,
+  });
+
+  return {
+    scrollTo,
+    setScrollY: (nextScrollY: number) => {
+      Object.defineProperty(window, "scrollY", {
+        configurable: true,
+        value: nextScrollY,
+      });
+    },
+    restore: () => {
+      if (originalDocumentScrollHeight) {
+        Object.defineProperty(
+          document.documentElement,
+          "scrollHeight",
+          originalDocumentScrollHeight,
+        );
+      } else {
+        delete (document.documentElement as { scrollHeight?: number })
+          .scrollHeight;
+      }
+      if (originalBodyScrollHeight) {
+        Object.defineProperty(
+          document.body,
+          "scrollHeight",
+          originalBodyScrollHeight,
+        );
+      } else {
+        delete (document.body as { scrollHeight?: number }).scrollHeight;
+      }
+      if (originalScrollY) {
+        Object.defineProperty(window, "scrollY", originalScrollY);
+      } else {
+        delete (window as { scrollY?: number }).scrollY;
+      }
+      if (originalInnerHeight) {
+        Object.defineProperty(window, "innerHeight", originalInnerHeight);
+      } else {
+        delete (window as { innerHeight?: number }).innerHeight;
+      }
+      scrollTo.mockRestore();
+    },
+  };
 };
 
 describe("Chat", () => {
@@ -204,49 +281,54 @@ describe("Chat", () => {
   });
 
   test("scrolls the page to the newest stream content", async () => {
-    const originalDocumentScrollHeight = Object.getOwnPropertyDescriptor(
-      document.documentElement,
-      "scrollHeight",
-    );
-    const originalBodyScrollHeight = Object.getOwnPropertyDescriptor(
-      document.body,
-      "scrollHeight",
-    );
-    const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => {});
-    Object.defineProperty(document.documentElement, "scrollHeight", {
-      configurable: true,
-      get: () => 240,
-    });
-    Object.defineProperty(document.body, "scrollHeight", {
-      configurable: true,
-      get: () => 240,
-    });
+    const { scrollTo, restore } = mockPageScroll();
 
     try {
       await renderChat();
 
       expect(scrollTo).toHaveBeenCalledWith(0, 240);
     } finally {
-      if (originalDocumentScrollHeight) {
-        Object.defineProperty(
-          document.documentElement,
-          "scrollHeight",
-          originalDocumentScrollHeight,
-        );
-      } else {
-        delete (document.documentElement as { scrollHeight?: number })
-          .scrollHeight;
-      }
-      if (originalBodyScrollHeight) {
-        Object.defineProperty(
-          document.body,
-          "scrollHeight",
-          originalBodyScrollHeight,
-        );
-      } else {
-        delete (document.body as { scrollHeight?: number }).scrollHeight;
-      }
-      scrollTo.mockRestore();
+      restore();
+    }
+  });
+
+  test("stops scrolling when the user moves away from the bottom", async () => {
+    const { scrollTo, setScrollY, restore } = mockPageScroll();
+
+    try {
+      const { scope } = await renderChat();
+      scrollTo.mockClear();
+
+      setScrollY(40);
+      window.dispatchEvent(new Event("scroll"));
+      await act(async () => {
+        await allSettled(replaceMessages, { scope, params: [] });
+      });
+
+      expect(scrollTo).not.toHaveBeenCalled();
+    } finally {
+      restore();
+    }
+  });
+
+  test("resumes scrolling when the user returns to the bottom", async () => {
+    const { scrollTo, setScrollY, restore } = mockPageScroll();
+
+    try {
+      const { scope } = await renderChat();
+      scrollTo.mockClear();
+
+      setScrollY(40);
+      window.dispatchEvent(new Event("scroll"));
+      setScrollY(132);
+      window.dispatchEvent(new Event("scroll"));
+      await act(async () => {
+        await allSettled(replaceMessages, { scope, params: [] });
+      });
+
+      expect(scrollTo).toHaveBeenCalledWith(0, 240);
+    } finally {
+      restore();
     }
   });
 

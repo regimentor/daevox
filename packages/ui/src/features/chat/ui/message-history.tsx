@@ -1,4 +1,4 @@
-import { useLayoutEffect } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { Message } from "../../../units/message/index.js";
 import type { AgentStreamState, ChatMessage } from "../chat.store.js";
 import styles from "./chat.module.css";
@@ -9,6 +9,17 @@ type MessageHistoryProps = {
   isSending: boolean;
   isLoading?: boolean;
 };
+
+const PAGE_BOTTOM_THRESHOLD = 8;
+
+const getPageHeight = () => {
+  const { body, documentElement } = document;
+  return Math.max(body.scrollHeight, documentElement.scrollHeight);
+};
+
+const isPageAtBottom = () =>
+  getPageHeight() - (window.scrollY + window.innerHeight) <=
+  PAGE_BOTTOM_THRESHOLD;
 
 const formatTimestamp = (createdAt: Date) =>
   createdAt.toLocaleTimeString([], {
@@ -83,19 +94,28 @@ const MessageHistory = ({
   isSending,
   isLoading = false,
 }: MessageHistoryProps) => {
+  const shouldAutoScrollRef = useRef(true);
   const liveAgent =
     agentStream !== null &&
     (agentStream.status === "streaming" || Boolean(agentStream.response));
 
+  useEffect(() => {
+    const handleScroll = () => {
+      shouldAutoScrollRef.current = isPageAtBottom();
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   useLayoutEffect(() => {
     const scrollPageToBottom = () => {
-      const { body, documentElement } = document;
-      const pageHeight = Math.max(
-        body.scrollHeight,
-        documentElement.scrollHeight,
-      );
+      if (!shouldAutoScrollRef.current) {
+        return;
+      }
 
-      window.scrollTo(0, pageHeight);
+      window.scrollTo(0, getPageHeight());
     };
 
     scrollPageToBottom();
