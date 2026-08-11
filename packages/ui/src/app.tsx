@@ -2,7 +2,6 @@ import { Outlet } from "react-router";
 import classNames from "classnames";
 import { useEffect, useState } from "react";
 import { Header, Main } from "./layout/index.js";
-import { DialogsSidebar } from "./features/dialogs/ui/dialogs-sidebar.js";
 import { uiApi } from "./api.js";
 import { CompletionErrorNotification } from "./units/notification/notification.js";
 import type { CompletionErrorEvent } from "@daevox/contracts";
@@ -21,7 +20,6 @@ const App = () => {
     <div className={classNames("dark", styles.app)}>
       <Header />
       <Main>
-        <DialogsSidebar />
         <div className={styles.content}>
           <Outlet />
         </div>

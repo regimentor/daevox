@@ -1,0 +1,62 @@
+.backdrop {
+  display: none;
+}
+
+.sidebar {
+  position: fixed;
+  top: var(--header-height, 4rem);
+  bottom: 0;
+  left: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  width: min(var(--sidebar-width, 15rem), calc(100vw - 1rem));
+  min-width: 0;
+  border-right: 1px solid var(--separator);
+  background: var(--surface);
+  box-shadow: 0.75rem 0 2rem color-mix(in oklch, black 18%, transparent);
+  padding: 1rem 0.75rem 1rem;
+  pointer-events: none;
+  transform: translateX(-100%);
+  visibility: hidden;
+  transition:
+    transform 180ms ease,
+    visibility 180ms ease;
+}
+
+.sidebarOpen {
+  pointer-events: auto;
+  transform: translateX(0);
+  visibility: visible;
+}
+
+@media (max-width: 639px) {
+  .backdrop {
+    position: fixed;
+    inset: var(--header-height, 4rem) 0 0;
+    z-index: 19;
+    display: block;
+    border: 0;
+    background: color-mix(in oklch, black 55%, transparent);
+    cursor: pointer;
+    opacity: 0;
+    pointer-events: none;
+    visibility: hidden;
+    transition:
+      opacity 180ms ease,
+      visibility 180ms ease;
+  }
+
+  .backdropOpen {
+    opacity: 1;
+    pointer-events: auto;
+    visibility: visible;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar,
+  .backdrop {
+    transition: none;
+  }
+}

@@ -14,6 +14,7 @@ import { Thinking, type ThinkingProps } from "../thinking/index.js";
 import { MemoryLookup } from "../memory-lookup/index.js";
 import { ToolCalls } from "../tool-calls/index.js";
 import { GenerationMetrics } from "./generation-metrics.js";
+import { normalizeMarkdownSource } from "./markdown.js";
 import { Sources } from "../sources/index.js";
 import styles from "./message.module.css";
 
@@ -213,7 +214,7 @@ const Message = ({
           },
         }}
       >
-        {children}
+        {normalizeMarkdownSource(children)}
       </ReactMarkdown>
     ) : (
       children

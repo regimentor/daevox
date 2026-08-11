@@ -3,6 +3,7 @@ import { createHashRouter, Outlet } from "react-router";
 import { RouterProvider } from "react-router/dom";
 import { App } from "./src/app.js";
 import { Chat } from "./src/pages/chat.js";
+import { ChatEntry } from "./src/pages/chat-entry.js";
 
 import "./index.css";
 import type { Api } from "@daevox/contracts";
@@ -15,7 +16,7 @@ const router = createHashRouter([
     children: [
       {
         path: "/",
-        Component: () => <p>Select a dialog.</p>,
+        Component: ChatEntry,
       },
       {
         path: "/dialogs/:dialogId",
