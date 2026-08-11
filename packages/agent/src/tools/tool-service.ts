@@ -5,6 +5,7 @@ import {
 } from "@daevox/shared";
 import { createWebOpenTool } from "./web_open/tool.js";
 import { createWebSearchTool } from "./web_search/tool.js";
+import { createRecallMemoryTool } from "./recall_memory/tool.js";
 
 class AgentToolService {
   readonly tools;
@@ -19,7 +20,11 @@ class AgentToolService {
       onToolResult,
     });
 
-    this.tools = [createWebSearchTool(logger), createWebOpenTool(logger)];
+    this.tools = [
+      createWebSearchTool(logger),
+      createWebOpenTool(logger),
+      createRecallMemoryTool(logger),
+    ];
   }
 }
 

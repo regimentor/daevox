@@ -1,11 +1,15 @@
 export {
   AgentGenerationMetricsSchema,
+  AgentMemoryLookupResultSchema,
+  AgentMemoryLookupSchema,
   AgentSourceSchema,
   AgentToolCallSchema,
   MessageSchema,
 } from "./message.js";
 export type {
   AgentGenerationMetrics,
+  AgentMemoryLookup,
+  AgentMemoryLookupResult,
   AgentSource,
   AgentToolCall,
   Message,

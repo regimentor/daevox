@@ -14,6 +14,7 @@ type StoredMessage = {
   tools: unknown;
   sources: unknown;
   metrics: unknown;
+  memory: unknown;
 };
 
 type DialogMessagesStore = {

@@ -3,6 +3,14 @@ export { GenerationMetricsTracker, estimateTokenCount } from "./src/metrics.js";
 export type { AgentGenerationMetrics } from "@daevox/contracts";
 export {
   AgentToolService,
+  createRecallMemoryTool,
+  recallMemory,
+  recallMemoryTool,
+  recall_memory,
+  lookupMemory,
+  RecallMemoryModeSchema,
+  RecallMemoryRequestSchema,
+  RecallMemoryToolRequestSchema,
   webOpen,
   webOpenTool,
   webSearch,
@@ -12,7 +20,19 @@ export {
   WebSearchRequestSchema,
   WebSearchToolRequestSchema,
 } from "./src/tools/index.js";
-export type { WebOpenRequest, WebSearchRequest } from "./src/tools/index.js";
+export type {
+  MemoryClientLike,
+  RecallMemoryError,
+  RecallMemoryNote,
+  RecallMemoryRequest,
+  RecallMemoryResponse,
+  RecallMemoryResult,
+  RecallMemoryServiceResult,
+  RecallMemoryToolRequest,
+  MemoryLookupResult,
+  WebOpenRequest,
+  WebSearchRequest,
+} from "./src/tools/index.js";
 export type {
   AgentToolCall,
   ToolEventListener,

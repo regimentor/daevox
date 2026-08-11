@@ -1,12 +1,14 @@
 import { z } from "zod";
 import type {
   AgentGenerationMetrics,
+  AgentMemoryLookup,
   AgentToolCall,
   Message,
 } from "./message.js";
 import {
   AgentSourceSchema,
   AgentToolCallSchema,
+  AgentMemoryLookupSchema,
   MessageSchema,
 } from "./message.js";
 import type { DialogSummary, NewMessageEvent } from "./dialogs.js";
@@ -41,6 +43,13 @@ const AgentStreamEventSchema = z.discriminatedUnion("type", [
       type: z.literal("source"),
     })
     .extend(AgentSourceSchema.shape),
+  z
+    .object({
+      dialogId: z.string(),
+      requestId: z.string(),
+      type: z.literal("memory"),
+    })
+    .extend(AgentMemoryLookupSchema.shape),
 ]);
 
 type AgentStreamEvent = z.infer<typeof AgentStreamEventSchema>;
@@ -138,6 +147,7 @@ export {
 export type {
   AgentStreamEvent,
   AgentGenerationMetrics,
+  AgentMemoryLookup,
   AgentStreamListener,
   Api,
   DialogSummary,

@@ -52,6 +52,18 @@ describe("MemoryGroomer", () => {
     vi.unstubAllEnvs();
   });
 
+  test("instructs the groomer to write human-readable memory fields in Russian", () => {
+    expect(memoryGroomerSystemPrompt).toContain(
+      "Все новые и изменяемые человекочитаемые поля заметок",
+    );
+    expect(memoryGroomerSystemPrompt).toContain(
+      "Если исходная стенограмма написана не на русском",
+    );
+    expect(memoryGroomerSystemPrompt).toContain(
+      "содержимое и заголовок заметки всё равно должны быть на русском",
+    );
+  });
+
   test("creates the OpenAI client and passes model settings, dialogue, prompt, and all tools", async () => {
     runTools.mockReturnValue({
       finalContent: vi.fn().mockResolvedValue("No durable memory changes."),

@@ -20,6 +20,7 @@ const storedMessage: StoredMessage = {
   tools: null,
   sources: null,
   metrics: null,
+  memory: null,
 };
 
 const makeService = (overrides: {

@@ -1,5 +1,6 @@
 import {
   type AgentSource,
+  type AgentMemoryLookup,
   type AgentToolCall,
   MessageSchema,
   type AgentStreamEvent,
@@ -23,6 +24,7 @@ type AgentStreamState = {
   response: string;
   tools: AgentToolCall[];
   sources: AgentSource[];
+  memory?: AgentMemoryLookup;
   status: "streaming" | "complete";
 };
 
@@ -96,6 +98,20 @@ const $agentStream = createStore<AgentStreamState | null>(null)
             domain: event.domain,
           },
         ],
+      };
+    }
+
+    if (event.type === "memory") {
+      return {
+        ...nextState,
+        memory: {
+          status: event.status,
+          query: event.query,
+          durationMs: event.durationMs,
+          resultCount: event.resultCount,
+          results: event.results,
+          error: event.error,
+        },
       };
     }
 

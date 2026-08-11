@@ -23,6 +23,20 @@ const AgentGenerationMetricsSchema = z.object({
   estimated: z.boolean(),
 });
 
+const AgentMemoryLookupResultSchema = z.object({
+  title: z.string(),
+  path: z.string(),
+});
+
+const AgentMemoryLookupSchema = z.object({
+  status: z.enum(["running", "complete", "error"]),
+  query: z.string(),
+  durationMs: z.number().int().nonnegative(),
+  resultCount: z.number().int().nonnegative(),
+  results: z.array(AgentMemoryLookupResultSchema),
+  error: z.string(),
+});
+
 const MessageSchema = z.object({
   actor: z.enum(["user", "agent"]),
   type: z.literal(["completion", "user"]),
@@ -33,17 +47,29 @@ const MessageSchema = z.object({
   tools: z.array(AgentToolCallSchema).optional(),
   sources: z.array(AgentSourceSchema).optional(),
   metrics: AgentGenerationMetricsSchema.optional(),
+  memory: AgentMemoryLookupSchema.optional(),
 });
 
 type Message = z.infer<typeof MessageSchema>;
 type AgentToolCall = z.infer<typeof AgentToolCallSchema>;
 type AgentSource = z.infer<typeof AgentSourceSchema>;
 type AgentGenerationMetrics = z.infer<typeof AgentGenerationMetricsSchema>;
+type AgentMemoryLookupResult = z.infer<typeof AgentMemoryLookupResultSchema>;
+type AgentMemoryLookup = z.infer<typeof AgentMemoryLookupSchema>;
 
 export {
   AgentGenerationMetricsSchema,
+  AgentMemoryLookupResultSchema,
+  AgentMemoryLookupSchema,
   AgentSourceSchema,
   AgentToolCallSchema,
   MessageSchema,
 };
-export type { AgentGenerationMetrics, AgentSource, AgentToolCall, Message };
+export type {
+  AgentGenerationMetrics,
+  AgentMemoryLookup,
+  AgentMemoryLookupResult,
+  AgentSource,
+  AgentToolCall,
+  Message,
+};

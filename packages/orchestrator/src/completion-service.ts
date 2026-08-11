@@ -1,6 +1,7 @@
 import {
   MessageSchema,
   type AgentSource,
+  type AgentMemoryLookup,
   type AgentToolCall,
   type DialogMessagesStore,
   type Message,
@@ -31,15 +32,17 @@ const toMessage = (record: StoredMessage): Message =>
     ...(record.tools === null ? {} : { tools: record.tools }),
     ...(record.sources === null ? {} : { sources: record.sources }),
     ...(record.metrics === null ? {} : { metrics: record.metrics }),
+    ...(record.memory == null ? {} : { memory: record.memory }),
   });
 
-const fallbackMessage = (): Message =>
+const fallbackMessage = (memory?: AgentMemoryLookup): Message =>
   MessageSchema.parse({
     actor: "agent",
     type: "completion",
     content:
       "Не удалось получить ответ. Проверьте подключение к модели и повторите запрос.",
     createdAt: new Date(),
+    ...(memory ? { memory } : {}),
   });
 
 @Injectable()
@@ -91,17 +94,25 @@ class CompletionService {
           this.emitStream({ dialogId, requestId, type: "tool", ...tool }),
         onSource: (source: AgentSource) =>
           this.emitStream({ dialogId, requestId, type: "source", ...source }),
+        onMemory: (lookup: AgentMemoryLookup) => {
+          memory = lookup;
+          this.emitStream({ dialogId, requestId, type: "memory", ...lookup });
+        },
       };
 
+      let memory: AgentMemoryLookup | undefined;
       let response: Message;
       try {
         response = await complete(
           { history, message: userMessage },
           callbacks,
         );
+        if (memory && response.memory === undefined) {
+          response = MessageSchema.parse({ ...response, memory });
+        }
       } catch (error) {
         this.logger.error("Completion failed", error);
-        response = fallbackMessage();
+        response = fallbackMessage(memory);
       }
 
       await this.messages.create({ dialogId, message: response });
@@ -122,7 +133,8 @@ class CompletionService {
 type AgentStreamEvent =
   | { dialogId: string; requestId: string; type: "reasoning" | "response"; content: string }
   | ({ dialogId: string; requestId: string; type: "tool" } & AgentToolCall)
-  | ({ dialogId: string; requestId: string; type: "source" } & AgentSource);
+  | ({ dialogId: string; requestId: string; type: "source" } & AgentSource)
+  | ({ dialogId: string; requestId: string; type: "memory" } & AgentMemoryLookup);
 
 export { CompletionService, fallbackMessage, toMessage };
 export type { CompletionFunction };

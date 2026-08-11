@@ -24,6 +24,7 @@ const recordsToStore = (initial: Message[] = []) => {
     tools: message.tools ?? null,
     sources: message.sources ?? null,
     metrics: message.metrics ?? null,
+    memory: message.memory ?? null,
   }));
   let nextId = records.length;
   const store: DialogMessagesStore = {
@@ -37,6 +38,7 @@ const recordsToStore = (initial: Message[] = []) => {
         tools: message.tools ?? null,
         sources: message.sources ?? null,
         metrics: message.metrics ?? null,
+        memory: message.memory ?? null,
       };
       records.push(record);
       return record;
@@ -47,6 +49,43 @@ const recordsToStore = (initial: Message[] = []) => {
 };
 
 describe("orchestrator CompletionService", () => {
+  test("translates memory callbacks into a separate stream event and persists the lookup", async () => {
+    const { records, store } = recordsToStore();
+    const events = new EventEmitter2();
+    const stream = vi.fn();
+    events.on("orchestrator.agent.stream", stream);
+    const memory = {
+      status: "complete" as const,
+      query: "GPU",
+      durationMs: 8,
+      resultCount: 1,
+      results: [{ title: "Hardware", path: "hardware.md" }],
+      error: "",
+    };
+    const response: Message = {
+      actor: "agent",
+      type: "completion",
+      content: "Hi",
+      createdAt: new Date("2026-08-10T10:00:01.000Z"),
+      memory,
+    };
+    const complete = vi.fn(async (_request, callbacks) => {
+      callbacks?.onMemory?.(memory);
+      return response;
+    });
+    const service = new CompletionService(store, events, complete);
+
+    await service.addMessage("dialog-1", "request-1", userMessage);
+
+    expect(stream).toHaveBeenCalledWith({
+      dialogId: "dialog-1",
+      requestId: "request-1",
+      type: "memory",
+      ...memory,
+    });
+    expect(records[1]?.memory).toEqual(memory);
+  });
+
   test("persists both messages and emits message.created", async () => {
     const { records, store } = recordsToStore();
     const events = new EventEmitter2();
